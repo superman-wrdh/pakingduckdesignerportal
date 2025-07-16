@@ -12,6 +12,7 @@ import Community from "./pages/Community";
 import Guide from "./pages/Guide";
 import Projects from "./pages/Projects";
 import Contract from "./pages/Contract";
+import MyTasks from "./pages/MyTasks";
 import Notifications from "./pages/Notifications";
 import DuckAI from "./pages/DuckAI";
 import Profile from "./pages/Profile";
@@ -142,7 +143,7 @@ const App = () => (
               <Route path="/projects-management/design" element={
                 <ProtectedRoute>
                   <CRMLayout>
-                    <Contract />
+                    <MyTasks />
                   </CRMLayout>
                 </ProtectedRoute>
               } />
