@@ -14,7 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      addresses: {
+      client_addresses: {
         Row: {
           city: string
           country: string
@@ -53,6 +53,36 @@ export type Database = {
           updated_at?: string
           user_id?: string
           zip_code?: string
+        }
+        Relationships: []
+      }
+      client_profiles: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -174,36 +204,6 @@ export type Database = {
           last4?: string | null
           stripe_payment_method_id?: string | null
           type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          company: string | null
-          created_at: string
-          email: string | null
-          id: string
-          phone: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          company?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          phone?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          company?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          phone?: string | null
           updated_at?: string
           user_id?: string
         }

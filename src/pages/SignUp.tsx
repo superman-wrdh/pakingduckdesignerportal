@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link, useNavigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 const SignUp = () => {
@@ -15,7 +15,19 @@ const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [company, setCompany] = useState("");
+  const { signUp, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   const passwordRequirements = [
     { label: "At least 8 characters", met: password.length >= 8 },
@@ -28,35 +40,25 @@ const SignUp = () => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
-      toast({
-        title: "Password mismatch",
-        description: "Passwords do not match. Please try again.",
-        variant: "destructive",
-      });
       return;
     }
 
     const allRequirementsMet = passwordRequirements.every(req => req.met);
     if (!allRequirementsMet) {
-      toast({
-        title: "Password requirements not met",
-        description: "Please ensure your password meets all requirements.",
-        variant: "destructive",
-      });
       return;
     }
 
     setIsLoading(true);
     
-    // Simulate signup
-    setTimeout(() => {
+    const { error } = await signUp(email, password, {
+      first_name: firstName,
+      last_name: lastName,
+      company: company,
+    });
+    
+    if (error) {
       setIsLoading(false);
-      toast({
-                title: "Account created successfully!",
-                description: "Welcome to Peking Duck. You can now sign in.",
-      });
-      navigate("/signin");
-    }, 1000);
+    }
   };
 
   return (
@@ -122,6 +124,8 @@ const SignUp = () => {
                   <Input
                     id="firstName"
                     placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                     required
                   />
                 </div>
@@ -130,6 +134,8 @@ const SignUp = () => {
                   <Input
                     id="lastName"
                     placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
                     required
                   />
                 </div>
@@ -141,6 +147,8 @@ const SignUp = () => {
                   id="email"
                   type="email"
                   placeholder="john.doe@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -150,6 +158,8 @@ const SignUp = () => {
                 <Input
                   id="company"
                   placeholder="Your company name"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
                   required
                 />
               </div>
