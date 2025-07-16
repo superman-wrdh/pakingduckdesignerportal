@@ -90,30 +90,30 @@ const Dashboard = () => {
 
   const stats = [
     {
-      title: "总项目数",
+      title: "Total Projects",
       value: projectStats.total.toString(),
-      change: `完成率 ${completionRate}%`,
+      change: `${completionRate}% completion rate`,
       icon: Package,
       color: "text-blue-600"
     },
     {
-      title: "进行中项目",
+      title: "In Progress",
       value: projectStats.inProgress.toString(),
-      change: `${projectStats.design} 个设计中`,
+      change: `${projectStats.design} in design`,
       icon: Clock,
       color: "text-orange-600"
     },
     {
-      title: "制造中项目",
+      title: "Manufacturing",
       value: projectStats.manufacturing.toString(),
-      change: `${projectStats.shipping} 个待发货`,
+      change: `${projectStats.shipping} ready to ship`,
       icon: Factory,
       color: "text-yellow-600"
     },
     {
-      title: "已完成项目",
+      title: "Completed",
       value: projectStats.completed.toString(),
-      change: `完成率 ${completionRate}%`,
+      change: `${completionRate}% completion rate`,
       icon: CheckCircle,
       color: "text-green-600"
     }
@@ -132,11 +132,11 @@ const Dashboard = () => {
 
   const getStatusDisplayName = (status: string) => {
     switch (status) {
-      case "project initiation": return "项目启动";
-      case "design stage": return "设计阶段";
-      case "manufacturing": return "制造中";
-      case "shipping": return "发货中";
-      case "completed": return "已完成";
+      case "project initiation": return "Project Initiation";
+      case "design stage": return "Design Stage";
+      case "manufacturing": return "Manufacturing";
+      case "shipping": return "Shipping";
+      case "completed": return "Completed";
       default: return status;
     }
   };
@@ -154,7 +154,7 @@ const Dashboard = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-CN', {
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -213,7 +213,7 @@ const Dashboard = () => {
             <CardContent className="space-y-6">
               {projects.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">暂无项目数据</p>
+                  <p className="text-muted-foreground">No project data available</p>
                 </div>
               ) : (
                 projects.map((project) => (
