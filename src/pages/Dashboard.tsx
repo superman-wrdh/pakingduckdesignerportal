@@ -74,18 +74,19 @@ const Dashboard = () => {
     fetchProjects();
   }, [user]);
 
-  // Calculate statistics from real data
+  // Calculate statistics from real data (excluding project initiation projects)
+  const myTaskProjects = projects.filter(p => p.status !== 'project initiation');
   const projectStats = {
-    total: projects.length,
-    inProgress: projects.filter(p => p.status !== 'completed').length,
-    completed: projects.filter(p => p.status === 'completed').length,
-    design: projects.filter(p => p.status === 'design stage').length,
-    manufacturing: projects.filter(p => p.status === 'manufacturing').length,
-    shipping: projects.filter(p => p.status === 'shipping').length
+    total: myTaskProjects.length,
+    inProgress: myTaskProjects.filter(p => p.status !== 'completed').length,
+    completed: myTaskProjects.filter(p => p.status === 'completed').length,
+    design: myTaskProjects.filter(p => p.status === 'design stage').length,
+    manufacturing: myTaskProjects.filter(p => p.status === 'manufacturing').length,
+    shipping: myTaskProjects.filter(p => p.status === 'shipping').length
   };
 
-  const completionRate = projectStats.total > 0 
-    ? Math.round((projectStats.completed / projectStats.total) * 100)
+  const completionRate = myTaskProjects.length > 0 
+    ? Math.round((projectStats.completed / myTaskProjects.length) * 100)
     : 0;
 
   const stats = [
@@ -211,12 +212,12 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {projects.length === 0 ? (
+              {myTaskProjects.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">No project data available</p>
+                  <p className="text-muted-foreground">No active projects in your tasks</p>
                 </div>
               ) : (
-                projects.map((project) => (
+                myTaskProjects.map((project) => (
                   <div key={project.id} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
