@@ -258,27 +258,6 @@ const Dashboard = () => {
 
         {/* Quick Actions & Updates */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button asChild className="w-full justify-start">
-                <Link to="/my-tasks">
-                  <ListTodo className="h-4 w-4 mr-2" />
-                  Go to My Tasks
-                </Link>
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Factory className="h-4 w-4 mr-2" />
-                Manufacturing Update
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Truck className="h-4 w-4 mr-2" />
-                Track Shipment
-              </Button>
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader>
