@@ -108,7 +108,7 @@ const Profile = () => {
         {!isEditing ? (
           <Button onClick={handleEdit}>
             <Edit className="h-4 w-4 mr-2" />
-            Edit Profile
+            Edit
           </Button>
         ) : (
           <div className="flex gap-2">
