@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Calendar, User, FileText, Eye } from "lucide-react";
+import { Search, Calendar, User, FileText, Eye, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Project {
   id: string;
@@ -32,6 +34,7 @@ const Projects = () => {
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchProjects();
@@ -92,6 +95,49 @@ const Projects = () => {
 
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase();
+  };
+
+  const handleAddToTasks = async (projectId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to add projects to your tasks.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: 'design stage' })
+        .eq('id', projectId);
+
+      if (error) {
+        console.error('Error updating project status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to add project to your tasks. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Project has been added to your tasks successfully!",
+      });
+
+      // Refresh the projects list to remove the added project
+      fetchProjects();
+    } catch (error) {
+      console.error('Error adding project to tasks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add project to your tasks. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -296,6 +342,31 @@ const Projects = () => {
                           <div>
                             <h4 className="font-medium mb-2">Status</h4>
                             <Badge variant="outline">{project.status}</Badge>
+                          </div>
+
+                          <div className="flex justify-end pt-4">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button className="w-full">
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Add to My Tasks
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Add Project to Your Tasks</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to add "{project.name}" to your tasks? This will move the project to the design stage and assign it to you.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleAddToTasks(project.id)}>
+                                    Add to Tasks
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       </DialogContent>
