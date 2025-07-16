@@ -15,7 +15,10 @@ import {
   Calendar, 
   Edit,
   Save,
-  X
+  X,
+  Upload,
+  FileImage,
+  Trash2
 } from "lucide-react";
 
 const Profile = () => {
@@ -32,6 +35,22 @@ const Profile = () => {
   });
 
   const [editedProfile, setEditedProfile] = useState(userProfile);
+  const [portfolio, setPortfolio] = useState([
+    {
+      id: 1,
+      title: "Eco-Friendly Packaging Design",
+      description: "Sustainable packaging solution for organic food products",
+      image: "/api/placeholder/300/200",
+      category: "Packaging Design"
+    },
+    {
+      id: 2,
+      title: "Brand Identity Package",
+      description: "Complete branding solution for a tech startup",
+      image: "/api/placeholder/300/200",
+      category: "Brand Development"
+    }
+  ]);
 
   const handleEdit = () => {
     setEditedProfile(userProfile);
@@ -53,6 +72,28 @@ const Profile = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newPortfolioItem = {
+          id: Date.now(),
+          title: "New Portfolio Item",
+          description: "Click edit to add description",
+          image: e.target?.result as string,
+          category: "Design"
+        };
+        setPortfolio(prev => [...prev, newPortfolioItem]);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeletePortfolioItem = (id: number) => {
+    setPortfolio(prev => prev.filter(item => item.id !== id));
   };
 
   return (
@@ -189,6 +230,77 @@ const Profile = () => {
               <span className="text-sm">Joined {userProfile.joinDate}</span>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Portfolio */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileImage className="h-5 w-5" />
+            Portfolio
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Label htmlFor="portfolio-upload" className="cursor-pointer">
+              <Button variant="outline" size="sm">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Work
+              </Button>
+            </Label>
+            <Input
+              id="portfolio-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <p className="text-sm text-muted-foreground">
+              Upload your design work to showcase your portfolio
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {portfolio.map((item) => (
+              <Card key={item.id} className="group relative overflow-hidden">
+                <div className="aspect-video relative">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleDeletePortfolioItem(item.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <CardContent className="p-4">
+                  <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+                  <p className="text-xs text-muted-foreground mb-2">{item.description}</p>
+                  <Badge variant="outline" className="text-xs">
+                    {item.category}
+                  </Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {portfolio.length === 0 && (
+            <div className="text-center py-8">
+              <FileImage className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                No portfolio items yet
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Upload your first design to get started
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
