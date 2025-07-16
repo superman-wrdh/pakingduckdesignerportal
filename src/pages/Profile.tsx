@@ -65,7 +65,7 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       const { data, error } = await supabase
-        .from('client_profiles')
+        .from('profiles')
         .select('*')
         .eq('user_id', user?.id)
         .single();
@@ -88,7 +88,7 @@ const Profile = () => {
         };
 
         const { data: newData, error: insertError } = await supabase
-          .from('client_profiles')
+          .from('profiles')
           .insert([newProfile])
           .select()
           .single();
@@ -142,7 +142,7 @@ const Profile = () => {
     setIsSaving(true);
     try {
       const { error } = await supabase
-        .from('client_profiles')
+        .from('profiles')
         .update(editedProfile)
         .eq('user_id', user.id);
 
