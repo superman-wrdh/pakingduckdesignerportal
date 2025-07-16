@@ -47,7 +47,7 @@ const workspaceItems = [
 
 const managementItems = [
   { title: "Projects", url: "/projects-management", icon: FolderOpen, subItems: [
-    { title: "All Projects", url: "/projects-management", icon: Eye },
+    { title: "Marketplace", url: "/projects-management", icon: Eye },
     { title: "My Tasks", url: "/projects-management/design", icon: FileText },
   ]},
 ];
