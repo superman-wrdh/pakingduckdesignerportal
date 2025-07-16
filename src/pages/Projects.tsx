@@ -110,11 +110,14 @@ const Projects = () => {
     try {
       const { error } = await supabase
         .from('projects')
-        .update({ status: 'design stage' })
+        .update({ 
+          status: 'design stage',
+          user_id: user.id
+        })
         .eq('id', projectId);
 
       if (error) {
-        console.error('Error updating project status:', error);
+        console.error('Error updating project:', error);
         toast({
           title: "Error",
           description: "Failed to add project to your tasks. Please try again.",
