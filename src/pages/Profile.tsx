@@ -27,13 +27,10 @@ import {
 
 interface Profile {
   id: string;
-  name: string | null;
-  title: string | null;
-  bio: string | null;
+  user_id: string;
+  email: string | null;
   phone: string | null;
-  location: string | null;
-  avatar_url: string | null;
-  skills: string[] | null;
+  company: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -68,7 +65,7 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('client_profiles')
         .select('*')
         .eq('user_id', user?.id)
         .single();
@@ -85,19 +82,13 @@ const Profile = () => {
         // Create a new profile if none exists
         const newProfile = {
           user_id: user?.id,
-          name: user?.user_metadata?.first_name 
-            ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ''}`.trim()
-            : user?.email || 'User',
-          title: 'Designer',
-          bio: null,
+          email: user?.email || null,
           phone: null,
-          location: null,
-          avatar_url: null,
-          skills: ['Packaging Design', 'Brand Development']
+          company: user?.user_metadata?.company || null,
         };
 
         const { data: newData, error: insertError } = await supabase
-          .from('profiles')
+          .from('client_profiles')
           .insert([newProfile])
           .select()
           .single();
@@ -151,7 +142,7 @@ const Profile = () => {
     setIsSaving(true);
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('client_profiles')
         .update(editedProfile)
         .eq('user_id', user.id);
 
@@ -188,7 +179,7 @@ const Profile = () => {
     setIsEditing(false);
   };
 
-  const handleInputChange = (field: keyof Profile, value: string | string[]) => {
+  const handleInputChange = (field: keyof Profile, value: string) => {
     setEditedProfile(prev => ({
       ...prev,
       [field]: value
@@ -374,53 +365,56 @@ const Profile = () => {
         <CardContent className="space-y-6">
           <div className="flex items-start gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={profile.avatar_url || undefined} alt={profile.name || 'User'} />
+              <AvatarImage src={undefined} alt={profile.email || 'User'} />
               <AvatarFallback className="text-lg">
-                {profile.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                {profile.email?.charAt(0).toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-3">
               {!isEditing ? (
                 <>
                   <div>
-                    <h3 className="text-xl font-semibold">{profile.name || 'User'}</h3>
-                    <p className="text-muted-foreground">{profile.title || 'Designer'}</p>
+                    <h3 className="text-xl font-semibold">{profile.email || 'User'}</h3>
+                    <p className="text-muted-foreground">{profile.company || 'Company'}</p>
                   </div>
-                  <p className="text-sm">{profile.bio || 'No bio provided'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Phone: {profile.phone || 'Not provided'}
+                  </p>
                 </>
               ) : (
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
-                      id="name"
-                      value={editedProfile.name || ''}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      id="email"
+                      value={editedProfile.email || ''}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      placeholder="Enter email"
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="title">Title</Label>
+                    <Label htmlFor="company">Company</Label>
                     <Input
-                      id="title"
-                      value={editedProfile.title || ''}
-                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      id="company"
+                      value={editedProfile.company || ''}
+                      onChange={(e) => handleInputChange('company', e.target.value)}
+                      placeholder="Enter company name"
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      value={editedProfile.bio || ''}
-                      onChange={(e) => handleInputChange('bio', e.target.value)}
-                      rows={3}
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={editedProfile.phone || ''}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      placeholder="Enter phone number"
                     />
                   </div>
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                {(profile.skills || ['Packaging Design', 'Brand Development']).map((skill, index) => (
-                  <Badge key={index} variant="secondary">{skill}</Badge>
-                ))}
+                <Badge variant="secondary">Packaging Design</Badge>
+                <Badge variant="secondary">Brand Development</Badge>
               </div>
             </div>
           </div>
@@ -431,9 +425,11 @@ const Profile = () => {
             <div className="flex items-center gap-3">
               <Mail className="h-4 w-4 text-muted-foreground" />
               {!isEditing ? (
-                <span className="text-sm">{user?.email}</span>
+                <span className="text-sm">{profile.email || 'No email'}</span>
               ) : (
-                <span className="text-sm text-muted-foreground">{user?.email} (cannot edit)</span>
+                <span className="text-sm text-muted-foreground">
+                  {profile.email || 'No email'} (from auth)
+                </span>
               )}
             </div>
             <div className="flex items-center gap-3">
@@ -441,25 +437,19 @@ const Profile = () => {
               {!isEditing ? (
                 <span className="text-sm">{profile.phone || 'No phone number'}</span>
               ) : (
-                <Input
-                  value={editedProfile.phone || ''}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="text-sm"
-                  placeholder="Enter phone number"
-                />
+                <span className="text-sm text-muted-foreground">
+                  Phone updated above
+                </span>
               )}
             </div>
             <div className="flex items-center gap-3">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               {!isEditing ? (
-                <span className="text-sm">{profile.location || 'No location'}</span>
+                <span className="text-sm">{profile.company || 'No company'}</span>
               ) : (
-                <Input
-                  value={editedProfile.location || ''}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
-                  className="text-sm"
-                  placeholder="Enter location"
-                />
+                <span className="text-sm text-muted-foreground">
+                  Company updated above
+                </span>
               )}
             </div>
             <div className="flex items-center gap-3">

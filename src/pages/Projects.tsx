@@ -288,9 +288,9 @@ const Projects = () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Projects Management</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Marketplace</h1>
             <p className="text-muted-foreground">
-              Manage your design projects and track their progress.
+              Browse and manage available design projects.
             </p>
           </div>
           <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
@@ -378,30 +378,26 @@ const Projects = () => {
           </Dialog>
         </div>
 
-        {/* Project Stats */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Active Projects Stats */}
+        <div className="mb-6">
           <Card>
             <CardContent className="p-6">
-              <div className="text-2xl font-bold text-foreground">8</div>
-              <p className="text-sm text-muted-foreground">Total Projects</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-foreground">6</div>
-              <p className="text-sm text-muted-foreground">Active Projects</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-foreground">1</div>
-              <p className="text-sm text-muted-foreground">Completed This Month</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-foreground">3</div>
-              <p className="text-sm text-muted-foreground">Unpaid Projects</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {projects.filter(p => p.status !== 'complete').length}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Active Projects</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium text-foreground">
+                    {projects.filter(p => p.status === 'complete').length} Completed
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {projects.length} Total Projects
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

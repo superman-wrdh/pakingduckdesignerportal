@@ -86,6 +86,48 @@ export type Database = {
         }
         Relationships: []
       }
+      designer_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          id: string
+          location: string | null
+          name: string | null
+          phone: string | null
+          skills: string[] | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          name?: string | null
+          phone?: string | null
+          skills?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          name?: string | null
+          phone?: string | null
+          skills?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       invitations: {
         Row: {
           company_name: string
@@ -237,48 +279,6 @@ export type Database = {
           id?: string
           image_url?: string | null
           title?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          bio: string | null
-          created_at: string | null
-          id: string
-          location: string | null
-          name: string | null
-          phone: string | null
-          skills: string[] | null
-          title: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          id?: string
-          location?: string | null
-          name?: string | null
-          phone?: string | null
-          skills?: string[] | null
-          title?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          id?: string
-          location?: string | null
-          name?: string | null
-          phone?: string | null
-          skills?: string[] | null
-          title?: string | null
           updated_at?: string | null
           user_id?: string
         }
