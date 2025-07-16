@@ -117,7 +117,7 @@ const SignUp = () => {
               alt="Peking Duck Logo" 
               className="w-10 h-10"
             />
-            <span className="font-semibold text-2xl">Peking Duck</span>
+            <span className="font-semibold text-2xl">Paking Duck</span>
           </div>
           <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
           <p className="text-muted-foreground">Join thousands of professionals managing their packaging designs</p>
