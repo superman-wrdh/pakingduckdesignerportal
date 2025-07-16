@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,8 @@ import {
   Search,
   FileText,
   Settings,
-  DollarSign
+  DollarSign,
+  ListTodo
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -261,9 +263,11 @@ const Dashboard = () => {
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full justify-start">
-                <Package className="h-4 w-4 mr-2" />
-                New Project
+              <Button asChild className="w-full justify-start">
+                <Link to="/my-tasks">
+                  <ListTodo className="h-4 w-4 mr-2" />
+                  Go to My Tasks
+                </Link>
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <Factory className="h-4 w-4 mr-2" />
