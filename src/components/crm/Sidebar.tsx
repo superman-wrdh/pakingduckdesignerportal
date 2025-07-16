@@ -187,7 +187,7 @@ export function AppSidebar() {
           {state !== "collapsed" && (
             <div className="flex flex-col">
               <span className="font-bold text-lg text-foreground">Paking Duck</span>
-              <span className="text-sm text-muted-foreground">CRM</span>
+              <span className="text-sm text-muted-foreground">Designer Portal</span>
             </div>
           )}
         </div>
