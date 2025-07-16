@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,9 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { 
   User, 
   Mail, 
@@ -18,83 +21,315 @@ import {
   X,
   Upload,
   FileImage,
-  Trash2
+  Trash2,
+  Loader2
 } from "lucide-react";
 
-const Profile = () => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [userProfile, setUserProfile] = useState({
-    name: "Sarah Chen",
-    title: "Senior Packaging Designer",
-    email: "sarah.chen@company.com",
-    phone: "+1 (555) 123-4567",
-    location: "San Francisco, CA",
-    joinDate: "March 2023",
-    avatar: "/api/placeholder/100/100",
-    bio: "Passionate packaging designer with 8+ years of experience creating sustainable and innovative packaging solutions for leading brands."
-  });
+interface Profile {
+  id: string;
+  name: string | null;
+  title: string | null;
+  bio: string | null;
+  phone: string | null;
+  location: string | null;
+  avatar_url: string | null;
+  skills: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
 
-  const [editedProfile, setEditedProfile] = useState(userProfile);
-  const [portfolio, setPortfolio] = useState([
-    {
-      id: 1,
-      title: "Eco-Friendly Packaging Design",
-      description: "Sustainable packaging solution for organic food products",
-      image: "/api/placeholder/300/200",
-      category: "Packaging Design"
-    },
-    {
-      id: 2,
-      title: "Brand Identity Package",
-      description: "Complete branding solution for a tech startup",
-      image: "/api/placeholder/300/200",
-      category: "Brand Development"
+interface PortfolioItem {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  category: string | null;
+  created_at: string;
+}
+
+const Profile = () => {
+  const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [editedProfile, setEditedProfile] = useState<Partial<Profile>>({});
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  // Fetch profile data
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+      fetchPortfolio();
     }
-  ]);
+  }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      if (data) {
+        setProfile(data);
+        setEditedProfile(data);
+      } else {
+        // Create a new profile if none exists
+        const newProfile = {
+          user_id: user?.id,
+          name: user?.user_metadata?.first_name 
+            ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ''}`.trim()
+            : user?.email || 'User',
+          title: 'Designer',
+          bio: null,
+          phone: null,
+          location: null,
+          avatar_url: null,
+          skills: ['Packaging Design', 'Brand Development']
+        };
+
+        const { data: newData, error: insertError } = await supabase
+          .from('profiles')
+          .insert([newProfile])
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+          toast({
+            title: "Error",
+            description: "Failed to create profile",
+            variant: "destructive",
+          });
+        } else {
+          setProfile(newData);
+          setEditedProfile(newData);
+        }
+      }
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchPortfolio = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('portfolio_items')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching portfolio:', error);
+        return;
+      }
+
+      setPortfolio(data || []);
+    } catch (error) {
+      console.error('Error in fetchPortfolio:', error);
+    }
+  };
 
   const handleEdit = () => {
-    setEditedProfile(userProfile);
+    setEditedProfile(profile || {});
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    setUserProfile(editedProfile);
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (!profile || !user) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(editedProfile)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save profile",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setProfile({ ...profile, ...editedProfile });
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (error) {
+      console.error('Error in handleSave:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
-    setEditedProfile(userProfile);
+    setEditedProfile(profile || {});
     setIsEditing(false);
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof Profile, value: string | string[]) => {
     setEditedProfile(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newPortfolioItem = {
-          id: Date.now(),
-          title: "New Portfolio Item",
-          description: "Click edit to add description",
-          image: e.target?.result as string,
-          category: "Design"
-        };
-        setPortfolio(prev => [...prev, newPortfolioItem]);
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('portfolio')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error('Error uploading file:', uploadError);
+        toast({
+          title: "Error",
+          description: "Failed to upload file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('portfolio')
+        .getPublicUrl(fileName);
+
+      // Create portfolio item
+      const newPortfolioItem = {
+        user_id: user.id,
+        title: "New Portfolio Item",
+        description: "Click edit to add description",
+        image_url: publicUrl,
+        category: "Design"
       };
-      reader.readAsDataURL(file);
+
+      const { data, error } = await supabase
+        .from('portfolio_items')
+        .insert([newPortfolioItem])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating portfolio item:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create portfolio item",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPortfolio(prev => [data, ...prev]);
+      toast({
+        title: "Success",
+        description: "Portfolio item added successfully",
+      });
+    } catch (error) {
+      console.error('Error in handleFileUpload:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload file",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleDeletePortfolioItem = (id: number) => {
-    setPortfolio(prev => prev.filter(item => item.id !== id));
+  const handleDeletePortfolioItem = async (id: string, imageUrl: string | null) => {
+    try {
+      const { error } = await supabase
+        .from('portfolio_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting portfolio item:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete portfolio item",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Delete from storage if image exists
+      if (imageUrl) {
+        const urlParts = imageUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const filePath = `${user?.id}/${fileName}`;
+        
+        await supabase.storage
+          .from('portfolio')
+          .remove([filePath]);
+      }
+
+      setPortfolio(prev => prev.filter(item => item.id !== id));
+      toast({
+        title: "Success",
+        description: "Portfolio item deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error in handleDeletePortfolioItem:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete portfolio item",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="text-center">
+          <p className="text-muted-foreground">Failed to load profile</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8">
@@ -106,17 +341,21 @@ const Profile = () => {
           </p>
         </div>
         {!isEditing ? (
-          <Button onClick={handleEdit}>
+          <Button onClick={handleEdit} disabled={isLoading}>
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button onClick={handleSave}>
-              <Save className="h-4 w-4 mr-2" />
-              Save
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
-            <Button variant="outline" onClick={handleCancel}>
+            <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
@@ -135,19 +374,19 @@ const Profile = () => {
         <CardContent className="space-y-6">
           <div className="flex items-start gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
+              <AvatarImage src={profile.avatar_url || undefined} alt={profile.name || 'User'} />
               <AvatarFallback className="text-lg">
-                {userProfile.name.split(' ').map(n => n[0]).join('')}
+                {profile.name?.split(' ').map(n => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-3">
               {!isEditing ? (
                 <>
                   <div>
-                    <h3 className="text-xl font-semibold">{userProfile.name}</h3>
-                    <p className="text-muted-foreground">{userProfile.title}</p>
+                    <h3 className="text-xl font-semibold">{profile.name || 'User'}</h3>
+                    <p className="text-muted-foreground">{profile.title || 'Designer'}</p>
                   </div>
-                  <p className="text-sm">{userProfile.bio}</p>
+                  <p className="text-sm">{profile.bio || 'No bio provided'}</p>
                 </>
               ) : (
                 <div className="space-y-4">
@@ -155,7 +394,7 @@ const Profile = () => {
                     <Label htmlFor="name">Name</Label>
                     <Input
                       id="name"
-                      value={editedProfile.name}
+                      value={editedProfile.name || ''}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                     />
                   </div>
@@ -163,7 +402,7 @@ const Profile = () => {
                     <Label htmlFor="title">Title</Label>
                     <Input
                       id="title"
-                      value={editedProfile.title}
+                      value={editedProfile.title || ''}
                       onChange={(e) => handleInputChange('title', e.target.value)}
                     />
                   </div>
@@ -171,7 +410,7 @@ const Profile = () => {
                     <Label htmlFor="bio">Bio</Label>
                     <Textarea
                       id="bio"
-                      value={editedProfile.bio}
+                      value={editedProfile.bio || ''}
                       onChange={(e) => handleInputChange('bio', e.target.value)}
                       rows={3}
                     />
@@ -179,9 +418,9 @@ const Profile = () => {
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">Packaging Design</Badge>
-                <Badge variant="secondary">Sustainable Materials</Badge>
-                <Badge variant="secondary">Brand Development</Badge>
+                {(profile.skills || ['Packaging Design', 'Brand Development']).map((skill, index) => (
+                  <Badge key={index} variant="secondary">{skill}</Badge>
+                ))}
               </div>
             </div>
           </div>
@@ -192,42 +431,45 @@ const Profile = () => {
             <div className="flex items-center gap-3">
               <Mail className="h-4 w-4 text-muted-foreground" />
               {!isEditing ? (
-                <span className="text-sm">{userProfile.email}</span>
+                <span className="text-sm">{user?.email}</span>
               ) : (
-                <Input
-                  value={editedProfile.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="text-sm"
-                />
+                <span className="text-sm text-muted-foreground">{user?.email} (cannot edit)</span>
               )}
             </div>
             <div className="flex items-center gap-3">
               <Phone className="h-4 w-4 text-muted-foreground" />
               {!isEditing ? (
-                <span className="text-sm">{userProfile.phone}</span>
+                <span className="text-sm">{profile.phone || 'No phone number'}</span>
               ) : (
                 <Input
-                  value={editedProfile.phone}
+                  value={editedProfile.phone || ''}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   className="text-sm"
+                  placeholder="Enter phone number"
                 />
               )}
             </div>
             <div className="flex items-center gap-3">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               {!isEditing ? (
-                <span className="text-sm">{userProfile.location}</span>
+                <span className="text-sm">{profile.location || 'No location'}</span>
               ) : (
                 <Input
-                  value={editedProfile.location}
+                  value={editedProfile.location || ''}
                   onChange={(e) => handleInputChange('location', e.target.value)}
                   className="text-sm"
+                  placeholder="Enter location"
                 />
               )}
             </div>
             <div className="flex items-center gap-3">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Joined {userProfile.joinDate}</span>
+              <span className="text-sm">
+                Joined {new Date(profile.created_at).toLocaleDateString('en-US', { 
+                  month: 'long', 
+                  year: 'numeric' 
+                })}
+              </span>
             </div>
           </div>
         </CardContent>
@@ -244,9 +486,13 @@ const Profile = () => {
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
             <Label htmlFor="portfolio-upload" className="cursor-pointer">
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Work
+              <Button variant="outline" size="sm" disabled={uploading}>
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {uploading ? 'Uploading...' : 'Upload Work'}
               </Button>
             </Label>
             <Input
@@ -254,6 +500,7 @@ const Profile = () => {
               type="file"
               accept="image/*"
               onChange={handleFileUpload}
+              disabled={uploading}
               className="hidden"
             />
             <p className="text-sm text-muted-foreground">
@@ -266,7 +513,7 @@ const Profile = () => {
               <Card key={item.id} className="group relative overflow-hidden">
                 <div className="aspect-video relative">
                   <img
-                    src={item.image}
+                    src={item.image_url || '/api/placeholder/300/200'}
                     alt={item.title}
                     className="w-full h-full object-cover"
                   />
@@ -274,16 +521,16 @@ const Profile = () => {
                     variant="destructive"
                     size="sm"
                     className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleDeletePortfolioItem(item.id)}
+                    onClick={() => handleDeletePortfolioItem(item.id, item.image_url)}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
                 <CardContent className="p-4">
                   <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-                  <p className="text-xs text-muted-foreground mb-2">{item.description}</p>
+                  <p className="text-xs text-muted-foreground mb-2">{item.description || 'No description'}</p>
                   <Badge variant="outline" className="text-xs">
-                    {item.category}
+                    {item.category || 'Design'}
                   </Badge>
                 </CardContent>
               </Card>
