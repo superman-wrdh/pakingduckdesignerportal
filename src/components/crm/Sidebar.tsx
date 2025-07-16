@@ -39,20 +39,17 @@ import { cn } from "@/lib/utils";
 const workspaceItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Chat", url: "/chat", icon: MessageCircle },
-  { title: "Statistics", url: "/statistics", icon: BarChart3 },
+  { title: "Profile", url: "/profile", icon: User },
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "Duck AI", url: "/duck-ai", icon: MessageCircle },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 const managementItems = [
-  { title: "Clients", url: "/clients-management", icon: Users },
-  { title: "Designers", url: "/designer-management", icon: User },
   { title: "Projects", url: "/projects-management", icon: FolderOpen, subItems: [
     { title: "Overview", url: "/projects-management", icon: Eye },
     { title: "Contract", url: "/projects-management/design", icon: FileText },
     { title: "RFQ", url: "/projects-management/manufacturing", icon: MessageSquare },
-    { title: "Invoice", url: "/projects-management/completed", icon: Receipt },
   ]},
 ];
 
