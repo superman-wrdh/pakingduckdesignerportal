@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -23,98 +24,153 @@ import {
   Settings,
   DollarSign
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+
+interface Project {
+  id: string;
+  name: string;
+  client: string;
+  status: string;
+  type: string;
+  description?: string;
+  due_date: string;
+  created_at: string;
+  updated_at: string;
+}
 
 const Dashboard = () => {
-  const projects = [
-    {
-      id: 1,
-      name: "Artisan Coffee Packaging",
-      client: "Bean & Brew Co.",
-      status: "Manufacturing",
-      progress: 75,
-      phase: "Quality Testing",
-      dueDate: "Dec 15, 2024",
-      team: 4
-    },
-    {
-      id: 2,
-      name: "Premium Tea Collection",
-      client: "Zen Tea House",
-      status: "Shipping",
-      progress: 95,
-      phase: "In Transit",
-      dueDate: "Dec 10, 2024",
-      team: 3
-    },
-    {
-      id: 3,
-      name: "Energy Drink Labels",
-      client: "Power Sports Inc.",
-      status: "Design",
-      progress: 40,
-      phase: "Client Review",
-      dueDate: "Dec 20, 2024",
-      team: 5
-    },
-    {
-      id: 4,
-      name: "Luxury Wine Bottles",
-      client: "Vintage Estates",
-      status: "Complete",
-      progress: 100,
-      phase: "Delivered",
-      dueDate: "Dec 5, 2024",
-      team: 6
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProjects = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load projects",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, [user]);
+
+  // Calculate statistics from real data
+  const projectStats = {
+    total: projects.length,
+    inProgress: projects.filter(p => p.status !== 'completed').length,
+    completed: projects.filter(p => p.status === 'completed').length,
+    design: projects.filter(p => p.status === 'design stage').length,
+    manufacturing: projects.filter(p => p.status === 'manufacturing').length,
+    shipping: projects.filter(p => p.status === 'shipping').length
+  };
+
+  const completionRate = projectStats.total > 0 
+    ? Math.round((projectStats.completed / projectStats.total) * 100)
+    : 0;
 
   const stats = [
     {
-      title: "Total Revenues",
-      value: "$284,500",
-      change: "+18% from last month",
-      icon: DollarSign,
-      color: "text-green-600"
-    },
-    {
-      title: "Active Projects",
-      value: "12",
-      change: "+2 from last month",
+      title: "总项目数",
+      value: projectStats.total.toString(),
+      change: `完成率 ${completionRate}%`,
       icon: Package,
       color: "text-blue-600"
     },
     {
-      title: "In Manufacturing",
-      value: "8",
-      change: "+3 this week",
-      icon: Factory,
+      title: "进行中项目",
+      value: projectStats.inProgress.toString(),
+      change: `${projectStats.design} 个设计中`,
+      icon: Clock,
       color: "text-orange-600"
     },
     {
-      title: "Ready to Ship",
-      value: "5",
-      change: "2 shipped today",
-      icon: Truck,
-      color: "text-green-600"
+      title: "制造中项目",
+      value: projectStats.manufacturing.toString(),
+      change: `${projectStats.shipping} 个待发货`,
+      icon: Factory,
+      color: "text-yellow-600"
     },
     {
-      title: "Completed",
-      value: "127",
-      change: "+15 this month",
+      title: "已完成项目",
+      value: projectStats.completed.toString(),
+      change: `完成率 ${completionRate}%`,
       icon: CheckCircle,
-      color: "text-purple-600"
+      color: "text-green-600"
     }
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Design": return "bg-blue-100 text-blue-800";
-      case "Manufacturing": return "bg-orange-100 text-orange-800";
-      case "Shipping": return "bg-yellow-100 text-yellow-800";
-      case "Complete": return "bg-green-100 text-green-800";
+      case "project initiation": return "bg-blue-100 text-blue-800";
+      case "design stage": return "bg-blue-100 text-blue-800";
+      case "manufacturing": return "bg-orange-100 text-orange-800";
+      case "shipping": return "bg-yellow-100 text-yellow-800";
+      case "completed": return "bg-green-100 text-green-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
+
+  const getStatusDisplayName = (status: string) => {
+    switch (status) {
+      case "project initiation": return "项目启动";
+      case "design stage": return "设计阶段";
+      case "manufacturing": return "制造中";
+      case "shipping": return "发货中";
+      case "completed": return "已完成";
+      default: return status;
+    }
+  };
+
+  const getProgressFromStatus = (status: string) => {
+    switch (status) {
+      case "project initiation": return 10;
+      case "design stage": return 30;
+      case "manufacturing": return 70;
+      case "shipping": return 90;
+      case "completed": return 100;
+      default: return 0;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-8">
@@ -155,38 +211,44 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {projects.map((project) => (
-                <div key={project.id} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <h4 className="font-medium">{project.name}</h4>
-                      <p className="text-sm text-muted-foreground">{project.client}</p>
-                    </div>
-                    <Badge className={getStatusColor(project.status)}>
-                      {project.status}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{project.phase}</span>
-                      <span className="font-medium">{project.progress}%</span>
-                    </div>
-                    <Progress value={project.progress} className="h-2" />
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {project.dueDate}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {project.team} team members
-                    </div>
-                  </div>
+              {projects.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">暂无项目数据</p>
                 </div>
-              ))}
+              ) : (
+                projects.map((project) => (
+                  <div key={project.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{project.name}</h4>
+                        <p className="text-sm text-muted-foreground">{project.client}</p>
+                      </div>
+                      <Badge className={getStatusColor(project.status)}>
+                        {getStatusDisplayName(project.status)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{getStatusDisplayName(project.status)}</span>
+                        <span className="font-medium">{getProgressFromStatus(project.status)}%</span>
+                      </div>
+                      <Progress value={getProgressFromStatus(project.status)} className="h-2" />
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(project.due_date)}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        {project.type}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
