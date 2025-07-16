@@ -249,7 +249,7 @@ const MyTasks = () => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase();
   };
 
-  const incompleteProjects = projects.filter(p => p.status !== 'complete');
+  const incompleteProjects = projects.filter(p => p.status !== 'complete' && p.status !== 'project initiation');
   const completedProjects = projects.filter(p => p.status === 'complete');
 
   if (loading) {
