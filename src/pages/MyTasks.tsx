@@ -222,14 +222,14 @@ const MyTasks = () => {
       </main>;
   }
   return <main className="flex-1 p-6 bg-background overflow-y-auto">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">My Tasks</h1>
-          <p className="text-muted-foreground">
-            Manage your assigned projects and track your progress.
-          </p>
-        </div>
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">My Tasks</h1>
+            <p className="text-muted-foreground">
+              Manage your assigned projects and track your progress.
+            </p>
+          </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
