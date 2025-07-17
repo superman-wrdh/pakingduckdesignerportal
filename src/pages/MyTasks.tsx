@@ -76,6 +76,7 @@ interface Feedback {
 }
 
 const MyTasks = () => {
+  // Force recompile - removing projectFiles references
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
