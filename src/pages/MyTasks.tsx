@@ -10,10 +10,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, Upload, File, CheckCircle2, Clock, User, FileText, Image, Trash2, Download, AlertCircle, Eye, MessageSquare, History, Layers } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar, Upload, File, CheckCircle2, Clock, User, FileText, Image, Trash2, Download, AlertCircle, Eye, MessageSquare, History, Layers, Star, MapPin, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+
 interface Project {
   id: string;
   name: string;
@@ -26,28 +28,67 @@ interface Project {
   updated_at: string;
   user_id: string;
 }
-interface ProjectFile {
+
+interface DesignVersion {
   id: string;
+  project_id: string;
+  version_number: number;
   name: string;
-  size: number;
-  type: string;
-  url: string;
-  uploaded_at: string;
+  description: string | null;
+  is_latest: boolean;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
 }
+
+interface VersionFile {
+  id: string;
+  version_id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number | null;
+  created_at: string;
+  user_id: string;
+}
+
+interface Annotation {
+  id: string;
+  version_id: string;
+  file_id: string;
+  x_position: number;
+  y_position: number;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
+interface Feedback {
+  id: string;
+  version_id: string;
+  content: string;
+  rating: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
 const MyTasks = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [projectFiles, setProjectFiles] = useState<{
-    [key: string]: ProjectFile[];
-  }>({});
-  const {
-    toast
-  } = useToast();
-  const {
-    user
-  } = useAuth();
+  const [designVersions, setDesignVersions] = useState<DesignVersion[]>([]);
+  const [versionFiles, setVersionFiles] = useState<{ [key: string]: VersionFile[] }>({});
+  const [annotations, setAnnotations] = useState<{ [key: string]: Annotation[] }>({});
+  const [feedback, setFeedback] = useState<{ [key: string]: Feedback[] }>({});
+  const [selectedVersion, setSelectedVersion] = useState<DesignVersion | null>(null);
+  const [newFeedback, setNewFeedback] = useState("");
+  const [newRating, setNewRating] = useState<number>(5);
+  const { toast } = useToast();
+  const { user } = useAuth();
   useEffect(() => {
     if (user) {
       fetchUserProjects();
@@ -73,11 +114,6 @@ const MyTasks = () => {
         return;
       }
       setProjects(data || []);
-
-      // Fetch files for each project
-      for (const project of data || []) {
-        await fetchProjectFiles(project.id);
-      }
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
@@ -89,93 +125,31 @@ const MyTasks = () => {
       setLoading(false);
     }
   };
-  const fetchProjectFiles = async (projectId: string) => {
+  // Fetch design versions for a project
+  const fetchDesignVersions = async (projectId: string) => {
     if (!user) return;
     try {
-      const {
-        data,
-        error
-      } = await supabase.storage.from('project-files').list(`${user.id}/${projectId}`, {
-        limit: 100
-      });
+      const { data, error } = await supabase
+        .from('design_versions')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('version_number', { ascending: false });
+      
       if (error) {
-        console.error('Error fetching project files:', error);
+        console.error('Error fetching design versions:', error);
         return;
       }
-      const files: ProjectFile[] = data?.map(file => ({
-        id: file.id,
-        name: file.name,
-        size: file.metadata?.size || 0,
-        type: file.metadata?.mimetype || 'application/octet-stream',
-        url: `${supabase.storage.from('project-files').getPublicUrl(`${user.id}/${projectId}/${file.name}`).data.publicUrl}`,
-        uploaded_at: file.created_at || new Date().toISOString()
-      })) || [];
-      setProjectFiles(prev => ({
-        ...prev,
-        [projectId]: files
-      }));
+      
+      setDesignVersions(data || []);
     } catch (error) {
-      console.error('Error fetching project files:', error);
+      console.error('Error fetching design versions:', error);
     }
   };
-  const handleFileUpload = async (projectId: string, files: FileList) => {
-    if (!user || !files.length) return;
-    setUploading(projectId);
-    try {
-      const uploadPromises = Array.from(files).map(async file => {
-        const fileName = `${Date.now()}-${file.name}`;
-        const filePath = `${user.id}/${projectId}/${fileName}`;
-        const {
-          error
-        } = await supabase.storage.from('project-files').upload(filePath, file);
-        if (error) {
-          throw error;
-        }
-        return fileName;
-      });
-      await Promise.all(uploadPromises);
-      toast({
-        title: "Success",
-        description: `${files.length} file(s) uploaded successfully`
-      });
 
-      // Refresh project files
-      await fetchProjectFiles(projectId);
-    } catch (error) {
-      console.error('Error uploading files:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload files",
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(null);
-    }
-  };
-  const handleDeleteFile = async (projectId: string, fileName: string) => {
-    if (!user) return;
-    try {
-      const {
-        error
-      } = await supabase.storage.from('project-files').remove([`${user.id}/${projectId}/${fileName}`]);
-      if (error) {
-        throw error;
-      }
-      toast({
-        title: "Success",
-        description: "File deleted successfully"
-      });
-
-      // Refresh project files
-      await fetchProjectFiles(projectId);
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete file",
-        variant: "destructive"
-      });
-    }
+  // Create initial version when opening project details
+  const handleViewProject = async (project: Project) => {
+    setSelectedProject(project);
+    await fetchDesignVersions(project.id);
   };
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -364,19 +338,19 @@ const MyTasks = () => {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">Files</span>
-                            <span className="text-sm text-muted-foreground">
-                              {projectFiles[project.id]?.length || 0} uploaded
-                            </span>
-                          </div>
+                             <span className="text-sm text-muted-foreground">
+                               {designVersions.length} versions
+                             </span>
+                           </div>
 
-                          <div className="flex gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelectedProject(project)}>
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
-                                </Button>
-                              </DialogTrigger>
+                           <div className="flex gap-2">
+                             <Dialog>
+                               <DialogTrigger asChild>
+                                 <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewProject(project)}>
+                                   <Eye className="h-4 w-4 mr-1" />
+                                   View Design
+                                 </Button>
+                               </DialogTrigger>
                               <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Project Details - {project.name}</DialogTitle>
@@ -402,10 +376,17 @@ const MyTasks = () => {
 
                                   <TabsContent value="versions" className="space-y-4 mt-4">
                                     <div className="space-y-3">
-                                      <h4 className="font-medium">Design Version History</h4>
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="font-medium">Design Version History</h4>
+                                        <Button size="sm" className="flex items-center gap-2">
+                                          <Plus className="h-4 w-4" />
+                                          Create New Version
+                                        </Button>
+                                      </div>
+                                      
                                       <div className="space-y-3">
-                                        {/* Mock design versions */}
-                                        <div className="border rounded-lg p-4">
+                                        {/* Latest Version with Upload */}
+                                        <div className="border rounded-lg p-4 bg-green-50">
                                           <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-3">
                                               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
@@ -421,12 +402,64 @@ const MyTasks = () => {
                                           <div className="text-sm text-muted-foreground mb-3">
                                             Updated color scheme and typography based on client feedback
                                           </div>
+                                          
+                                          {/* Upload Section for Latest Version */}
+                                          <div className="space-y-3 mb-4">
+                                            <div>
+                                              <Label htmlFor="version-upload" className="text-sm font-medium">Upload Design Files</Label>
+                                              <Input 
+                                                id="version-upload" 
+                                                type="file" 
+                                                multiple 
+                                                accept="image/*,.pdf,.fig,.sketch"
+                                                className="mt-2"
+                                                disabled={uploading === 'version-3'}
+                                              />
+                                            </div>
+                                            {uploading === 'version-3' && (
+                                              <Alert>
+                                                <AlertCircle className="h-4 w-4" />
+                                                <AlertDescription>
+                                                  Uploading files... Please wait.
+                                                </AlertDescription>
+                                              </Alert>
+                                            )}
+                                          </div>
+                                          
+                                          {/* Sample uploaded files */}
+                                          <div className="space-y-2 mb-3">
+                                            <div className="text-sm font-medium">Uploaded Files (3)</div>
+                                            <div className="space-y-1">
+                                              <div className="flex items-center justify-between p-2 bg-white rounded border">
+                                                <div className="flex items-center gap-2">
+                                                  <Image className="h-4 w-4 text-blue-500" />
+                                                  <span className="text-sm">homepage-design-v3.png</span>
+                                                  <span className="text-xs text-muted-foreground">(2.4 MB)</span>
+                                                </div>
+                                                <Button variant="outline" size="sm">
+                                                  <Download className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                              <div className="flex items-center justify-between p-2 bg-white rounded border">
+                                                <div className="flex items-center gap-2">
+                                                  <File className="h-4 w-4 text-purple-500" />
+                                                  <span className="text-sm">style-guide.pdf</span>
+                                                  <span className="text-xs text-muted-foreground">(1.8 MB)</span>
+                                                </div>
+                                                <Button variant="outline" size="sm">
+                                                  <Download className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          
                                           <Button variant="outline" size="sm">
                                             <Eye className="h-4 w-4 mr-2" />
                                             View Design
                                           </Button>
                                         </div>
 
+                                        {/* Previous Versions (Read-only) */}
                                         <div className="border rounded-lg p-4">
                                           <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-3">
@@ -441,6 +474,21 @@ const MyTasks = () => {
                                           </div>
                                           <div className="text-sm text-muted-foreground mb-3">
                                             Initial design with basic layout and structure
+                                          </div>
+                                          <div className="space-y-2 mb-3">
+                                            <div className="text-sm font-medium">Files (2)</div>
+                                            <div className="space-y-1">
+                                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                                <div className="flex items-center gap-2">
+                                                  <Image className="h-4 w-4 text-blue-500" />
+                                                  <span className="text-sm">homepage-v2.png</span>
+                                                  <span className="text-xs text-muted-foreground">(1.9 MB)</span>
+                                                </div>
+                                                <Button variant="outline" size="sm">
+                                                  <Download className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            </div>
                                           </div>
                                           <Button variant="outline" size="sm">
                                             <Eye className="h-4 w-4 mr-2" />
@@ -462,6 +510,21 @@ const MyTasks = () => {
                                           </div>
                                           <div className="text-sm text-muted-foreground mb-3">
                                             Initial concept and wireframes
+                                          </div>
+                                          <div className="space-y-2 mb-3">
+                                            <div className="text-sm font-medium">Files (1)</div>
+                                            <div className="space-y-1">
+                                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                                <div className="flex items-center gap-2">
+                                                  <File className="h-4 w-4 text-gray-500" />
+                                                  <span className="text-sm">wireframes-v1.pdf</span>
+                                                  <span className="text-xs text-muted-foreground">(0.8 MB)</span>
+                                                </div>
+                                                <Button variant="outline" size="sm">
+                                                  <Download className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            </div>
                                           </div>
                                           <Button variant="outline" size="sm">
                                             <Eye className="h-4 w-4 mr-2" />
@@ -681,9 +744,9 @@ const MyTasks = () => {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">Files</span>
-                            <span className="text-sm text-muted-foreground">
-                              {projectFiles[project.id]?.length || 0} files
-                            </span>
+                             <span className="text-sm text-muted-foreground">
+                               View project details
+                             </span>
                           </div>
 
                           <Button variant="outline" size="sm" className="w-full" onClick={() => setSelectedProject(project)}>
