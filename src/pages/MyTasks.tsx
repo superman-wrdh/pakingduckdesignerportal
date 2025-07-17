@@ -359,21 +359,17 @@ const MyTasks = () => {
                                     View project files, design versions, and client feedback
                                   </DialogDescription>
                                 </DialogHeader>
-                                <Tabs defaultValue="versions" className="w-full">
-                                  <TabsList className="grid w-full grid-cols-3">
-                                    <TabsTrigger value="versions">
-                                      <History className="h-4 w-4 mr-2" />
-                                      Design Versions
-                                    </TabsTrigger>
-                                    <TabsTrigger value="annotations">
-                                      <Layers className="h-4 w-4 mr-2" />
-                                      Client Annotations
-                                    </TabsTrigger>
-                                    <TabsTrigger value="feedback">
-                                      <MessageSquare className="h-4 w-4 mr-2" />
-                                      Client Feedback
-                                    </TabsTrigger>
-                                  </TabsList>
+                                 <Tabs defaultValue="versions" className="w-full">
+                                   <TabsList className="grid w-full grid-cols-2">
+                                     <TabsTrigger value="versions">
+                                       <History className="h-4 w-4 mr-2" />
+                                       Design Versions
+                                     </TabsTrigger>
+                                     <TabsTrigger value="feedback">
+                                       <MessageSquare className="h-4 w-4 mr-2" />
+                                       Client Feedback
+                                     </TabsTrigger>
+                                   </TabsList>
 
                                   <TabsContent value="versions" className="space-y-4 mt-4">
                                     <div className="space-y-3">
@@ -536,62 +532,6 @@ const MyTasks = () => {
                                     </div>
                                   </TabsContent>
 
-                                  <TabsContent value="annotations" className="space-y-4 mt-4">
-                                    <div className="space-y-3">
-                                      <h4 className="font-medium">Client Annotations</h4>
-                                      <div className="space-y-3">
-                                        <div className="border rounded-lg p-4">
-                                          <div className="flex items-start gap-3">
-                                            <Avatar className="w-8 h-8">
-                                              <AvatarFallback className="bg-blue-100 text-blue-600">
-                                                {getInitials(project.client)}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-medium text-sm">{project.client}</span>
-                                                <span className="text-xs text-muted-foreground">2 hours ago</span>
-                                              </div>
-                                              <div className="text-sm text-muted-foreground mb-2">
-                                                Annotation on Header Section
-                                              </div>
-                                              <div className="text-sm">
-                                                "The header looks great! Can we make the logo slightly larger and adjust the navigation spacing?"
-                                              </div>
-                                              <div className="mt-2">
-                                                <Badge variant="outline" className="text-xs">Design v3</Badge>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="border rounded-lg p-4">
-                                          <div className="flex items-start gap-3">
-                                            <Avatar className="w-8 h-8">
-                                              <AvatarFallback className="bg-blue-100 text-blue-600">
-                                                {getInitials(project.client)}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-medium text-sm">{project.client}</span>
-                                                <span className="text-xs text-muted-foreground">1 day ago</span>
-                                              </div>
-                                              <div className="text-sm text-muted-foreground mb-2">
-                                                Annotation on Color Palette
-                                              </div>
-                                              <div className="text-sm">
-                                                "Love the color scheme! The blue works perfectly with our brand guidelines."
-                                              </div>
-                                              <div className="mt-2">
-                                                <Badge variant="outline" className="text-xs">Design v2</Badge>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </TabsContent>
 
                                   <TabsContent value="feedback" className="space-y-4 mt-4">
                                     <div className="space-y-3">
