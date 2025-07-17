@@ -612,24 +612,9 @@ const MyTasks = () => {
                               </DialogContent>
                             </Dialog>
 
-                            <div className="space-x-2">
-                              
-                              
-                              <label htmlFor={`upload-${project.id}`}>
-                                <Button variant="outline" size="sm" asChild>
-                                  <span>
-                                    <Upload className="h-4 w-4 mr-1" />
-                                    Upload
-                                  </span>
-                                </Button>
-                              </label>
-                              <input id={`upload-${project.id}`} type="file" multiple accept="image/*,.pdf,.doc,.docx,.zip" className="hidden" onChange={e => {
-                          const files = e.target.files;
-                          if (files && files.length > 0) {
-                            console.log(`Uploading ${files.length} file(s) for project ${project.name}`);
-                            // TODO: Implement file upload logic
-                          }
-                        }} />
+                             <div className="space-x-2">
+                               
+                               
                             </div>
                           </div>
                         </div>
