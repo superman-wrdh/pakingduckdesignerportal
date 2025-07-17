@@ -384,13 +384,9 @@ const MyTasks = () => {
                                     View project files, design versions, and client feedback
                                   </DialogDescription>
                                 </DialogHeader>
-                                <Tabs defaultValue="files" className="w-full">
-                                  <TabsList className="grid w-full grid-cols-4">
-                                    <TabsTrigger value="files">
-                                      <Upload className="h-4 w-4 mr-2" />
-                                      Files
-                                    </TabsTrigger>
-                                   <TabsTrigger value="versions">
+                                <Tabs defaultValue="versions" className="w-full">
+                                  <TabsList className="grid w-full grid-cols-3">
+                                    <TabsTrigger value="versions">
                                       <History className="h-4 w-4 mr-2" />
                                       Design Versions
                                     </TabsTrigger>
@@ -403,49 +399,6 @@ const MyTasks = () => {
                                       Client Feedback
                                     </TabsTrigger>
                                   </TabsList>
-
-                                  <TabsContent value="files" className="space-y-4 mt-4">
-                                    <div>
-                                      <Label htmlFor="file-upload">Upload New Files</Label>
-                                      <Input id="file-upload" type="file" multiple onChange={e => {
-                                  if (e.target.files) {
-                                    handleFileUpload(project.id, e.target.files);
-                                  }
-                                }} disabled={uploading === project.id} className="mt-2" />
-                                    </div>
-
-                                    {uploading === project.id && <Alert>
-                                        <AlertCircle className="h-4 w-4" />
-                                        <AlertDescription>
-                                          Uploading files... Please wait.
-                                        </AlertDescription>
-                                      </Alert>}
-
-                                    {projectFiles[project.id] && projectFiles[project.id].length > 0 && <div>
-                                        <h4 className="font-medium mb-2">Uploaded Files</h4>
-                                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                                          {projectFiles[project.id].map(file => <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                              <div className="flex items-center gap-3">
-                                                <File className="h-5 w-5 text-muted-foreground" />
-                                                <div>
-                                                  <div className="text-sm font-medium">{file.name}</div>
-                                                  <div className="text-xs text-muted-foreground">
-                                                    {formatFileSize(file.size)} • {formatDate(file.uploaded_at)}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              <div className="flex items-center gap-2">
-                                                <Button variant="outline" size="sm" onClick={() => window.open(file.url, '_blank')}>
-                                                  <Download className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="outline" size="sm" onClick={() => handleDeleteFile(project.id, file.name)}>
-                                                  <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                            </div>)}
-                                        </div>
-                                      </div>}
-                                  </TabsContent>
 
                                   <TabsContent value="versions" className="space-y-4 mt-4">
                                     <div className="space-y-3">
