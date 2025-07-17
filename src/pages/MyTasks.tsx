@@ -21,7 +21,11 @@ import {
   Image,
   Trash2,
   Download,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  MessageSquare,
+  History,
+  Layers
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -403,80 +407,306 @@ const MyTasks = () => {
                                   className="flex-1"
                                   onClick={() => setSelectedProject(project)}
                                 >
-                                  <Upload className="h-4 w-4 mr-1" />
-                                  Upload
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="sm:max-w-[600px]">
+                              <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
                                 <DialogHeader>
-                                  <DialogTitle>Upload Files - {project.name}</DialogTitle>
+                                  <DialogTitle>Project Details - {project.name}</DialogTitle>
                                   <DialogDescription>
-                                    Upload project files, designs, or documents
+                                    View project files, design versions, and client feedback
                                   </DialogDescription>
                                 </DialogHeader>
-                                <div className="space-y-4">
-                                  <div>
-                                    <Label htmlFor="file-upload">Select Files</Label>
-                                    <Input
-                                      id="file-upload"
-                                      type="file"
-                                      multiple
-                                      onChange={(e) => {
-                                        if (e.target.files) {
-                                          handleFileUpload(project.id, e.target.files);
-                                        }
-                                      }}
-                                      disabled={uploading === project.id}
-                                      className="mt-2"
-                                    />
-                                  </div>
+                                <Tabs defaultValue="files" className="w-full">
+                                  <TabsList className="grid w-full grid-cols-4">
+                                    <TabsTrigger value="files">
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      Files
+                                    </TabsTrigger>
+                                    <TabsTrigger value="versions">
+                                      <History className="h-4 w-4 mr-2" />
+                                      Versions
+                                    </TabsTrigger>
+                                    <TabsTrigger value="annotations">
+                                      <Layers className="h-4 w-4 mr-2" />
+                                      Annotations
+                                    </TabsTrigger>
+                                    <TabsTrigger value="feedback">
+                                      <MessageSquare className="h-4 w-4 mr-2" />
+                                      Feedback
+                                    </TabsTrigger>
+                                  </TabsList>
 
-                                  {uploading === project.id && (
-                                    <Alert>
-                                      <AlertCircle className="h-4 w-4" />
-                                      <AlertDescription>
-                                        Uploading files... Please wait.
-                                      </AlertDescription>
-                                    </Alert>
-                                  )}
-
-                                  {projectFiles[project.id] && projectFiles[project.id].length > 0 && (
+                                  <TabsContent value="files" className="space-y-4 mt-4">
                                     <div>
-                                      <h4 className="font-medium mb-2">Uploaded Files</h4>
-                                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                                        {projectFiles[project.id].map((file) => (
-                                          <div key={file.id} className="flex items-center justify-between p-2 border rounded">
-                                            <div className="flex items-center gap-2">
-                                              <File className="h-4 w-4" />
-                                              <div>
-                                                <div className="text-sm font-medium">{file.name}</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                  {formatFileSize(file.size)} • {formatDate(file.uploaded_at)}
+                                      <Label htmlFor="file-upload">Upload New Files</Label>
+                                      <Input
+                                        id="file-upload"
+                                        type="file"
+                                        multiple
+                                        onChange={(e) => {
+                                          if (e.target.files) {
+                                            handleFileUpload(project.id, e.target.files);
+                                          }
+                                        }}
+                                        disabled={uploading === project.id}
+                                        className="mt-2"
+                                      />
+                                    </div>
+
+                                    {uploading === project.id && (
+                                      <Alert>
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertDescription>
+                                          Uploading files... Please wait.
+                                        </AlertDescription>
+                                      </Alert>
+                                    )}
+
+                                    {projectFiles[project.id] && projectFiles[project.id].length > 0 && (
+                                      <div>
+                                        <h4 className="font-medium mb-2">Uploaded Files</h4>
+                                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                                          {projectFiles[project.id].map((file) => (
+                                            <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                              <div className="flex items-center gap-3">
+                                                <File className="h-5 w-5 text-muted-foreground" />
+                                                <div>
+                                                  <div className="text-sm font-medium">{file.name}</div>
+                                                  <div className="text-xs text-muted-foreground">
+                                                    {formatFileSize(file.size)} • {formatDate(file.uploaded_at)}
+                                                  </div>
                                                 </div>
                                               </div>
+                                              <div className="flex items-center gap-2">
+                                                <Button 
+                                                  variant="outline" 
+                                                  size="sm"
+                                                  onClick={() => window.open(file.url, '_blank')}
+                                                >
+                                                  <Download className="h-4 w-4" />
+                                                </Button>
+                                                <Button 
+                                                  variant="outline" 
+                                                  size="sm"
+                                                  onClick={() => handleDeleteFile(project.id, file.name)}
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                              <Button 
-                                                variant="outline" 
-                                                size="sm"
-                                                onClick={() => window.open(file.url, '_blank')}
-                                              >
-                                                <Download className="h-4 w-4" />
-                                              </Button>
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleDeleteFile(project.id, file.name)}
-                                              >
-                                                <Trash2 className="h-4 w-4" />
-                                              </Button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </TabsContent>
+
+                                  <TabsContent value="versions" className="space-y-4 mt-4">
+                                    <div className="space-y-3">
+                                      <h4 className="font-medium">Design Version History</h4>
+                                      <div className="space-y-3">
+                                        {/* Mock design versions */}
+                                        <div className="border rounded-lg p-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                                v3
+                                              </div>
+                                              <div>
+                                                <div className="font-medium">Latest Version</div>
+                                                <div className="text-sm text-muted-foreground">Updated 2 hours ago</div>
+                                              </div>
+                                            </div>
+                                            <Badge className="bg-green-100 text-green-800">Current</Badge>
+                                          </div>
+                                          <div className="text-sm text-muted-foreground mb-3">
+                                            Updated color scheme and typography based on client feedback
+                                          </div>
+                                          <Button variant="outline" size="sm">
+                                            <Eye className="h-4 w-4 mr-2" />
+                                            View Design
+                                          </Button>
+                                        </div>
+
+                                        <div className="border rounded-lg p-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-muted-foreground text-sm font-medium">
+                                                v2
+                                              </div>
+                                              <div>
+                                                <div className="font-medium">Previous Version</div>
+                                                <div className="text-sm text-muted-foreground">Updated 1 day ago</div>
+                                              </div>
                                             </div>
                                           </div>
-                                        ))}
+                                          <div className="text-sm text-muted-foreground mb-3">
+                                            Initial design with basic layout and structure
+                                          </div>
+                                          <Button variant="outline" size="sm">
+                                            <Eye className="h-4 w-4 mr-2" />
+                                            View Design
+                                          </Button>
+                                        </div>
+
+                                        <div className="border rounded-lg p-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-muted-foreground text-sm font-medium">
+                                                v1
+                                              </div>
+                                              <div>
+                                                <div className="font-medium">First Draft</div>
+                                                <div className="text-sm text-muted-foreground">Updated 3 days ago</div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="text-sm text-muted-foreground mb-3">
+                                            Initial concept and wireframes
+                                          </div>
+                                          <Button variant="outline" size="sm">
+                                            <Eye className="h-4 w-4 mr-2" />
+                                            View Design
+                                          </Button>
+                                        </div>
                                       </div>
                                     </div>
-                                  )}
-                                </div>
+                                  </TabsContent>
+
+                                  <TabsContent value="annotations" className="space-y-4 mt-4">
+                                    <div className="space-y-3">
+                                      <h4 className="font-medium">Client Annotations</h4>
+                                      <div className="space-y-3">
+                                        <div className="border rounded-lg p-4">
+                                          <div className="flex items-start gap-3">
+                                            <Avatar className="w-8 h-8">
+                                              <AvatarFallback className="bg-blue-100 text-blue-600">
+                                                {getInitials(project.client)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-medium text-sm">{project.client}</span>
+                                                <span className="text-xs text-muted-foreground">2 hours ago</span>
+                                              </div>
+                                              <div className="text-sm text-muted-foreground mb-2">
+                                                Annotation on Header Section
+                                              </div>
+                                              <div className="text-sm">
+                                                "The header looks great! Can we make the logo slightly larger and adjust the navigation spacing?"
+                                              </div>
+                                              <div className="mt-2">
+                                                <Badge variant="outline" className="text-xs">Design v3</Badge>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="border rounded-lg p-4">
+                                          <div className="flex items-start gap-3">
+                                            <Avatar className="w-8 h-8">
+                                              <AvatarFallback className="bg-blue-100 text-blue-600">
+                                                {getInitials(project.client)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-medium text-sm">{project.client}</span>
+                                                <span className="text-xs text-muted-foreground">1 day ago</span>
+                                              </div>
+                                              <div className="text-sm text-muted-foreground mb-2">
+                                                Annotation on Color Palette
+                                              </div>
+                                              <div className="text-sm">
+                                                "Love the color scheme! The blue works perfectly with our brand guidelines."
+                                              </div>
+                                              <div className="mt-2">
+                                                <Badge variant="outline" className="text-xs">Design v2</Badge>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TabsContent>
+
+                                  <TabsContent value="feedback" className="space-y-4 mt-4">
+                                    <div className="space-y-3">
+                                      <h4 className="font-medium">Client Feedback</h4>
+                                      <div className="space-y-4">
+                                        <div className="border rounded-lg p-4">
+                                          <div className="flex items-start gap-3">
+                                            <Avatar className="w-8 h-8">
+                                              <AvatarFallback className="bg-blue-100 text-blue-600">
+                                                {getInitials(project.client)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                              <div className="flex items-center gap-2 mb-2">
+                                                <span className="font-medium">{project.client}</span>
+                                                <span className="text-sm text-muted-foreground">3 hours ago</span>
+                                              </div>
+                                              <div className="text-sm mb-3">
+                                                "The latest design iteration looks fantastic! I'm particularly impressed with the user experience flow and the attention to detail in the interface elements. The color palette aligns perfectly with our brand identity."
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <Badge className="bg-green-100 text-green-800">Approved</Badge>
+                                                <Badge variant="outline" className="text-xs">Design v3</Badge>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="border rounded-lg p-4">
+                                          <div className="flex items-start gap-3">
+                                            <Avatar className="w-8 h-8">
+                                              <AvatarFallback className="bg-blue-100 text-blue-600">
+                                                {getInitials(project.client)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                              <div className="flex items-center gap-2 mb-2">
+                                                <span className="font-medium">{project.client}</span>
+                                                <span className="text-sm text-muted-foreground">2 days ago</span>
+                                              </div>
+                                              <div className="text-sm mb-3">
+                                                "Good progress on the design! A few suggestions: 1) Can we adjust the typography for better readability? 2) The navigation could be more prominent. 3) Consider adding more whitespace in the content areas."
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <Badge className="bg-yellow-100 text-yellow-800">Revision Requested</Badge>
+                                                <Badge variant="outline" className="text-xs">Design v2</Badge>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="border rounded-lg p-4">
+                                          <div className="flex items-start gap-3">
+                                            <Avatar className="w-8 h-8">
+                                              <AvatarFallback className="bg-blue-100 text-blue-600">
+                                                {getInitials(project.client)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                              <div className="flex items-center gap-2 mb-2">
+                                                <span className="font-medium">{project.client}</span>
+                                                <span className="text-sm text-muted-foreground">4 days ago</span>
+                                              </div>
+                                              <div className="text-sm mb-3">
+                                                "Thank you for the initial design concepts. The overall direction looks promising. We'd like to see some variations in the layout and explore different color options for the primary elements."
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <Badge className="bg-blue-100 text-blue-800">Initial Review</Badge>
+                                                <Badge variant="outline" className="text-xs">Design v1</Badge>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TabsContent>
+                                </Tabs>
                               </DialogContent>
                             </Dialog>
 
