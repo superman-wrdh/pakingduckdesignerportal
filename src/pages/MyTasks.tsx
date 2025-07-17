@@ -10,27 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Calendar, 
-  Upload, 
-  File, 
-  CheckCircle2, 
-  Clock, 
-  User, 
-  FileText,
-  Image,
-  Trash2,
-  Download,
-  AlertCircle,
-  Eye,
-  MessageSquare,
-  History,
-  Layers
-} from "lucide-react";
+import { Calendar, Upload, File, CheckCircle2, Clock, User, FileText, Image, Trash2, Download, AlertCircle, Eye, MessageSquare, History, Layers } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-
 interface Project {
   id: string;
   name: string;
@@ -43,7 +26,6 @@ interface Project {
   updated_at: string;
   user_id: string;
 }
-
 interface ProjectFile {
   id: string;
   name: string;
@@ -52,45 +34,46 @@ interface ProjectFile {
   url: string;
   uploaded_at: string;
 }
-
 const MyTasks = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [projectFiles, setProjectFiles] = useState<{ [key: string]: ProjectFile[] }>({});
-  const { toast } = useToast();
-  const { user } = useAuth();
-
+  const [projectFiles, setProjectFiles] = useState<{
+    [key: string]: ProjectFile[];
+  }>({});
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
   useEffect(() => {
     if (user) {
       fetchUserProjects();
     }
   }, [user]);
-
   const fetchUserProjects = async () => {
     if (!user) return;
-
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', {
+        ascending: false
+      });
       if (error) {
         console.error('Error fetching projects:', error);
         toast({
           title: "Error",
           description: "Failed to fetch your projects",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
-
       setProjects(data || []);
-      
+
       // Fetch files for each project
       for (const project of data || []) {
         await fetchProjectFiles(project.id);
@@ -100,69 +83,60 @@ const MyTasks = () => {
       toast({
         title: "Error",
         description: "Failed to fetch your projects",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const fetchProjectFiles = async (projectId: string) => {
     if (!user) return;
-
     try {
-      const { data, error } = await supabase.storage
-        .from('project-files')
-        .list(`${user.id}/${projectId}`, {
-          limit: 100,
-        });
-
+      const {
+        data,
+        error
+      } = await supabase.storage.from('project-files').list(`${user.id}/${projectId}`, {
+        limit: 100
+      });
       if (error) {
         console.error('Error fetching project files:', error);
         return;
       }
-
       const files: ProjectFile[] = data?.map(file => ({
         id: file.id,
         name: file.name,
         size: file.metadata?.size || 0,
         type: file.metadata?.mimetype || 'application/octet-stream',
         url: `${supabase.storage.from('project-files').getPublicUrl(`${user.id}/${projectId}/${file.name}`).data.publicUrl}`,
-        uploaded_at: file.created_at || new Date().toISOString(),
+        uploaded_at: file.created_at || new Date().toISOString()
       })) || [];
-
-      setProjectFiles(prev => ({ ...prev, [projectId]: files }));
+      setProjectFiles(prev => ({
+        ...prev,
+        [projectId]: files
+      }));
     } catch (error) {
       console.error('Error fetching project files:', error);
     }
   };
-
   const handleFileUpload = async (projectId: string, files: FileList) => {
     if (!user || !files.length) return;
-
     setUploading(projectId);
-
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
+      const uploadPromises = Array.from(files).map(async file => {
         const fileName = `${Date.now()}-${file.name}`;
         const filePath = `${user.id}/${projectId}/${fileName}`;
-
-        const { error } = await supabase.storage
-          .from('project-files')
-          .upload(filePath, file);
-
+        const {
+          error
+        } = await supabase.storage.from('project-files').upload(filePath, file);
         if (error) {
           throw error;
         }
-
         return fileName;
       });
-
       await Promise.all(uploadPromises);
-
       toast({
         title: "Success",
-        description: `${files.length} file(s) uploaded successfully`,
+        description: `${files.length} file(s) uploaded successfully`
       });
 
       // Refresh project files
@@ -172,28 +146,24 @@ const MyTasks = () => {
       toast({
         title: "Error",
         description: "Failed to upload files",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setUploading(null);
     }
   };
-
   const handleDeleteFile = async (projectId: string, fileName: string) => {
     if (!user) return;
-
     try {
-      const { error } = await supabase.storage
-        .from('project-files')
-        .remove([`${user.id}/${projectId}/${fileName}`]);
-
+      const {
+        error
+      } = await supabase.storage.from('project-files').remove([`${user.id}/${projectId}/${fileName}`]);
       if (error) {
         throw error;
       }
-
       toast({
         title: "Success",
-        description: "File deleted successfully",
+        description: "File deleted successfully"
       });
 
       // Refresh project files
@@ -203,37 +173,50 @@ const MyTasks = () => {
       toast({
         title: "Error",
         description: "Failed to delete file",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "project initiation": return "bg-gray-100 text-gray-800";
-      case "design development": return "bg-blue-100 text-blue-800";
-      case "prototyping": return "bg-purple-100 text-purple-800";
-      case "testing & refinement": return "bg-yellow-100 text-yellow-800";
-      case "production": return "bg-orange-100 text-orange-800";
-      case "delivering": return "bg-cyan-100 text-cyan-800";
-      case "complete": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "project initiation":
+        return "bg-gray-100 text-gray-800";
+      case "design development":
+        return "bg-blue-100 text-blue-800";
+      case "prototyping":
+        return "bg-purple-100 text-purple-800";
+      case "testing & refinement":
+        return "bg-yellow-100 text-yellow-800";
+      case "production":
+        return "bg-orange-100 text-orange-800";
+      case "delivering":
+        return "bg-cyan-100 text-cyan-800";
+      case "complete":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
-
   const getStatusProgress = (status: string) => {
     switch (status) {
-      case "project initiation": return 10;
-      case "design development": return 30;
-      case "prototyping": return 50;
-      case "testing & refinement": return 70;
-      case "production": return 85;
-      case "delivering": return 95;
-      case "complete": return 100;
-      default: return 0;
+      case "project initiation":
+        return 10;
+      case "design development":
+        return 30;
+      case "prototyping":
+        return 50;
+      case "testing & refinement":
+        return 70;
+      case "production":
+        return 85;
+      case "delivering":
+        return 95;
+      case "complete":
+        return 100;
+      default:
+        return 0;
     }
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -241,24 +224,19 @@ const MyTasks = () => {
       day: 'numeric'
     });
   };
-
   const formatFileSize = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     if (bytes === 0) return '0 Bytes';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
-
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase();
   };
-
   const incompleteProjects = projects.filter(p => p.status !== 'complete' && p.status !== 'project initiation');
   const completedProjects = projects.filter(p => p.status === 'complete');
-
   if (loading) {
-    return (
-      <main className="flex-1 p-6 bg-background overflow-y-auto">
+    return <main className="flex-1 p-6 bg-background overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center min-h-96">
             <div className="text-center">
@@ -267,12 +245,9 @@ const MyTasks = () => {
             </div>
           </div>
         </div>
-      </main>
-    );
+      </main>;
   }
-
-  return (
-    <main className="flex-1 p-6 bg-background overflow-y-auto">
+  return <main className="flex-1 p-6 bg-background overflow-y-auto">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -339,18 +314,14 @@ const MyTasks = () => {
           </TabsList>
 
           <TabsContent value="active" className="space-y-6">
-            {incompleteProjects.length === 0 ? (
-              <Card className="p-12 text-center">
+            {incompleteProjects.length === 0 ? <Card className="p-12 text-center">
                 <div className="text-muted-foreground">
                   <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <h3 className="text-lg font-medium mb-2">No active projects</h3>
                   <p className="text-sm">You don't have any active projects at the moment.</p>
                 </div>
-              </Card>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {incompleteProjects.map((project) => (
-                  <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+              </Card> : <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {incompleteProjects.map(project => <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -401,12 +372,7 @@ const MyTasks = () => {
                           <div className="flex gap-2">
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="flex-1"
-                                  onClick={() => setSelectedProject(project)}
-                                >
+                                <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelectedProject(project)}>
                                   <Eye className="h-4 w-4 mr-1" />
                                   View
                                 </Button>
@@ -441,35 +407,24 @@ const MyTasks = () => {
                                   <TabsContent value="files" className="space-y-4 mt-4">
                                     <div>
                                       <Label htmlFor="file-upload">Upload New Files</Label>
-                                      <Input
-                                        id="file-upload"
-                                        type="file"
-                                        multiple
-                                        onChange={(e) => {
-                                          if (e.target.files) {
-                                            handleFileUpload(project.id, e.target.files);
-                                          }
-                                        }}
-                                        disabled={uploading === project.id}
-                                        className="mt-2"
-                                      />
+                                      <Input id="file-upload" type="file" multiple onChange={e => {
+                                  if (e.target.files) {
+                                    handleFileUpload(project.id, e.target.files);
+                                  }
+                                }} disabled={uploading === project.id} className="mt-2" />
                                     </div>
 
-                                    {uploading === project.id && (
-                                      <Alert>
+                                    {uploading === project.id && <Alert>
                                         <AlertCircle className="h-4 w-4" />
                                         <AlertDescription>
                                           Uploading files... Please wait.
                                         </AlertDescription>
-                                      </Alert>
-                                    )}
+                                      </Alert>}
 
-                                    {projectFiles[project.id] && projectFiles[project.id].length > 0 && (
-                                      <div>
+                                    {projectFiles[project.id] && projectFiles[project.id].length > 0 && <div>
                                         <h4 className="font-medium mb-2">Uploaded Files</h4>
                                         <div className="space-y-2 max-h-64 overflow-y-auto">
-                                          {projectFiles[project.id].map((file) => (
-                                            <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                          {projectFiles[project.id].map(file => <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
                                               <div className="flex items-center gap-3">
                                                 <File className="h-5 w-5 text-muted-foreground" />
                                                 <div>
@@ -480,26 +435,16 @@ const MyTasks = () => {
                                                 </div>
                                               </div>
                                               <div className="flex items-center gap-2">
-                                                <Button 
-                                                  variant="outline" 
-                                                  size="sm"
-                                                  onClick={() => window.open(file.url, '_blank')}
-                                                >
+                                                <Button variant="outline" size="sm" onClick={() => window.open(file.url, '_blank')}>
                                                   <Download className="h-4 w-4" />
                                                 </Button>
-                                                <Button 
-                                                  variant="outline" 
-                                                  size="sm"
-                                                  onClick={() => handleDeleteFile(project.id, file.name)}
-                                                >
+                                                <Button variant="outline" size="sm" onClick={() => handleDeleteFile(project.id, file.name)}>
                                                   <Trash2 className="h-4 w-4" />
                                                 </Button>
                                               </div>
-                                            </div>
-                                          ))}
+                                            </div>)}
                                         </div>
-                                      </div>
-                                    )}
+                                      </div>}
                                   </TabsContent>
 
                                   <TabsContent value="versions" className="space-y-4 mt-4">
@@ -711,65 +656,41 @@ const MyTasks = () => {
                             </Dialog>
 
                             <div className="space-x-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => setSelectedProject(project)}
-                              >
-                                <FileText className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
+                              
                               
                               <label htmlFor={`upload-${project.id}`}>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  asChild
-                                >
+                                <Button variant="outline" size="sm" asChild>
                                   <span>
                                     <Upload className="h-4 w-4 mr-1" />
                                     Upload
                                   </span>
                                 </Button>
                               </label>
-                              <input
-                                id={`upload-${project.id}`}
-                                type="file"
-                                multiple
-                                accept="image/*,.pdf,.doc,.docx,.zip"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const files = e.target.files;
-                                  if (files && files.length > 0) {
-                                    console.log(`Uploading ${files.length} file(s) for project ${project.name}`);
-                                    // TODO: Implement file upload logic
-                                  }
-                                }}
-                              />
+                              <input id={`upload-${project.id}`} type="file" multiple accept="image/*,.pdf,.doc,.docx,.zip" className="hidden" onChange={e => {
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            console.log(`Uploading ${files.length} file(s) for project ${project.name}`);
+                            // TODO: Implement file upload logic
+                          }
+                        }} />
                             </div>
                           </div>
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                  </Card>)}
+              </div>}
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-6">
-            {completedProjects.length === 0 ? (
-              <Card className="p-12 text-center">
+            {completedProjects.length === 0 ? <Card className="p-12 text-center">
                 <div className="text-muted-foreground">
                   <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <h3 className="text-lg font-medium mb-2">No completed projects</h3>
                   <p className="text-sm">You haven't completed any projects yet.</p>
                 </div>
-              </Card>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {completedProjects.map((project) => (
-                  <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+              </Card> : <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {completedProjects.map(project => <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -812,27 +733,18 @@ const MyTasks = () => {
                             </span>
                           </div>
 
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="w-full"
-                            onClick={() => setSelectedProject(project)}
-                          >
+                          <Button variant="outline" size="sm" className="w-full" onClick={() => setSelectedProject(project)}>
                             <FileText className="h-4 w-4 mr-1" />
                             View Details
                           </Button>
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                  </Card>)}
+              </div>}
           </TabsContent>
         </Tabs>
       </div>
-    </main>
-  );
+    </main>;
 };
-
 export default MyTasks;
