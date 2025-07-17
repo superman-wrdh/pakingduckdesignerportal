@@ -390,17 +390,17 @@ const MyTasks = () => {
                                       <Upload className="h-4 w-4 mr-2" />
                                       Files
                                     </TabsTrigger>
-                                    <TabsTrigger value="versions">
+                                   <TabsTrigger value="versions">
                                       <History className="h-4 w-4 mr-2" />
-                                      Versions
+                                      Design Versions
                                     </TabsTrigger>
                                     <TabsTrigger value="annotations">
                                       <Layers className="h-4 w-4 mr-2" />
-                                      Annotations
+                                      Client Annotations
                                     </TabsTrigger>
                                     <TabsTrigger value="feedback">
                                       <MessageSquare className="h-4 w-4 mr-2" />
-                                      Feedback
+                                      Client Feedback
                                     </TabsTrigger>
                                   </TabsList>
 
