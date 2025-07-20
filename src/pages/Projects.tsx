@@ -59,6 +59,8 @@ const Projects = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [designVersions, setDesignVersions] = useState<DesignVersion[]>([]);
   const [versionFiles, setVersionFiles] = useState<{ [key: string]: VersionFile[] }>({});
+  const [designs, setDesigns] = useState<any[]>([]);
+  const [projectAttachments, setProjectAttachments] = useState<any[]>([]);
   const [loadingDesigns, setLoadingDesigns] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -437,24 +439,23 @@ const Projects = () => {
                                 {project.description || "No description provided"}
                               </p>
                               
-                              {/* Design Versions Summary */}
+                              {/* Designs Summary */}
                               {designVersions.length > 0 && (
                                 <div className="mt-4">
-                                  <h5 className="font-medium mb-2 text-sm">Design Versions ({designVersions.length})</h5>
+                                  <h5 className="font-medium mb-2 text-sm">Designs ({designVersions.length})</h5>
                                   <div className="space-y-2">
                                     {designVersions.slice(0, 3).map((version) => (
                                       <div key={version.id} className="p-2 bg-muted/50 rounded-md space-y-1">
                                         <div className="flex items-center justify-between">
                                           <div className="flex items-center gap-2">
                                             <Folder className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm font-medium">v{version.version_number}</span>
-                                            <span className="text-sm text-muted-foreground">{version.name}</span>
+                                            <span className="text-sm font-medium">{version.name}</span>
                                             {version.is_latest && (
                                               <Badge variant="secondary" className="text-xs px-1.5 py-0.5">Latest</Badge>
                                             )}
                                           </div>
                                           <div className="text-xs text-muted-foreground">
-                                            {versionFiles[version.id]?.length || 0} files
+                                            {versionFiles[version.id]?.length || 0} attachments
                                           </div>
                                         </div>
                                         {version.description && (
@@ -466,7 +467,7 @@ const Projects = () => {
                                     ))}
                                     {designVersions.length > 3 && (
                                       <p className="text-xs text-muted-foreground text-center">
-                                        +{designVersions.length - 3} more versions
+                                        +{designVersions.length - 3} more designs
                                       </p>
                                     )}
                                   </div>
