@@ -443,18 +443,25 @@ const Projects = () => {
                                   <h5 className="font-medium mb-2 text-sm">Design Versions ({designVersions.length})</h5>
                                   <div className="space-y-2">
                                     {designVersions.slice(0, 3).map((version) => (
-                                      <div key={version.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
-                                        <div className="flex items-center gap-2">
-                                          <Folder className="h-4 w-4 text-muted-foreground" />
-                                          <span className="text-sm font-medium">v{version.version_number}</span>
-                                          <span className="text-sm text-muted-foreground">{version.name}</span>
-                                          {version.is_latest && (
-                                            <Badge variant="secondary" className="text-xs px-1.5 py-0.5">Latest</Badge>
-                                          )}
+                                      <div key={version.id} className="p-2 bg-muted/50 rounded-md space-y-1">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <Folder className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-sm font-medium">v{version.version_number}</span>
+                                            <span className="text-sm text-muted-foreground">{version.name}</span>
+                                            {version.is_latest && (
+                                              <Badge variant="secondary" className="text-xs px-1.5 py-0.5">Latest</Badge>
+                                            )}
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            {versionFiles[version.id]?.length || 0} files
+                                          </div>
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          {versionFiles[version.id]?.length || 0} files
-                                        </div>
+                                        {version.description && (
+                                          <p className="text-xs text-muted-foreground ml-6">
+                                            {version.description}
+                                          </p>
+                                        )}
                                       </div>
                                     ))}
                                     {designVersions.length > 3 && (
