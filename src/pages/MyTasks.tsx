@@ -239,10 +239,69 @@ const MyTasks = () => {
     }
   };
 
+  // Fetch version files for a design version
+  const fetchVersionFiles = async (versionId: string) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('version_files')
+        .select('*')
+        .eq('version_id', versionId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching version files:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching version files:', error);
+      return [];
+    }
+  };
+
+  // Fetch feedback for a design version
+  const fetchVersionFeedback = async (versionId: string) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('feedback')
+        .select('*')
+        .eq('version_id', versionId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching feedback:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      return [];
+    }
+  };
+
   // Create initial version when opening project details
   const handleViewProject = async (project: Project) => {
     setSelectedProject(project);
     await fetchDesignVersions(project.id);
+    
+    // Fetch version files for all versions of this project
+    const versions = projectDesignVersions[project.id] || [];
+    const filesMap: { [key: string]: VersionFile[] } = {};
+    const feedbackMap: { [key: string]: Feedback[] } = {};
+    
+    for (const version of versions) {
+      const files = await fetchVersionFiles(version.id);
+      const versionFeedback = await fetchVersionFeedback(version.id);
+      filesMap[version.id] = files;
+      feedbackMap[version.id] = versionFeedback;
+    }
+    
+    setVersionFiles(filesMap);
+    setFeedback(feedbackMap);
   };
 
   // Handle upload button click - for creating new design
@@ -752,243 +811,174 @@ const MyTasks = () => {
                                      </TabsTrigger>
                                    </TabsList>
 
-                                  <TabsContent value="versions" className="space-y-4 mt-4">
-                                    <div className="space-y-3">
-                                      <div className="flex items-center justify-between">
-                                        <h4 className="font-medium">Design Version History</h4>
-                                        <Button size="sm" className="flex items-center gap-2">
-                                          <Plus className="h-4 w-4" />
-                                          Create New Version
-                                        </Button>
-                                      </div>
-                                      
-                                      <div className="space-y-3">
-                                        {/* Latest Version with Upload */}
-                                        <div className="border rounded-lg p-4 bg-green-50">
-                                          <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-3">
-                                              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                                v3
-                                              </div>
-                                              <div>
-                                                <div className="font-medium">Latest Version</div>
-                                                <div className="text-sm text-muted-foreground">Updated 2 hours ago</div>
-                                              </div>
-                                            </div>
-                                            <Badge className="bg-green-100 text-green-800">Current</Badge>
-                                          </div>
-                                          <div className="text-sm text-muted-foreground mb-3">
-                                            Updated color scheme and typography based on client feedback
-                                          </div>
-                                          
-                                          {/* Upload Section for Latest Version */}
-                                          <div className="space-y-3 mb-4">
-                                            <div>
-                                              <Label htmlFor="version-upload" className="text-sm font-medium">Upload Design Files</Label>
-                                              <Input 
-                                                id="version-upload" 
-                                                type="file" 
-                                                multiple 
-                                                accept="image/*,.pdf,.fig,.sketch"
-                                                className="mt-2"
-                                                disabled={uploading === 'version-3'}
-                                              />
-                                            </div>
-                                            {uploading === 'version-3' && (
-                                              <Alert>
-                                                <AlertCircle className="h-4 w-4" />
-                                                <AlertDescription>
-                                                  Uploading files... Please wait.
-                                                </AlertDescription>
-                                              </Alert>
-                                            )}
-                                          </div>
-                                          
-                                          {/* Sample uploaded files */}
-                                          <div className="space-y-2 mb-3">
-                                            <div className="text-sm font-medium">Uploaded Files (3)</div>
-                                            <div className="space-y-1">
-                                              <div className="flex items-center justify-between p-2 bg-white rounded border">
-                                                <div className="flex items-center gap-2">
-                                                  <Image className="h-4 w-4 text-blue-500" />
-                                                  <span className="text-sm">homepage-design-v3.png</span>
-                                                  <span className="text-xs text-muted-foreground">(2.4 MB)</span>
-                                                </div>
-                                                <Button variant="outline" size="sm">
-                                                  <Download className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                              <div className="flex items-center justify-between p-2 bg-white rounded border">
-                                                <div className="flex items-center gap-2">
-                                                  <File className="h-4 w-4 text-purple-500" />
-                                                  <span className="text-sm">style-guide.pdf</span>
-                                                  <span className="text-xs text-muted-foreground">(1.8 MB)</span>
-                                                </div>
-                                                <Button variant="outline" size="sm">
-                                                  <Download className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          
-                                          <Button variant="outline" size="sm">
-                                            <Eye className="h-4 w-4 mr-2" />
-                                            View Design
-                                          </Button>
-                                        </div>
-
-                                        {/* Previous Versions (Read-only) */}
-                                        <div className="border rounded-lg p-4">
-                                          <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-3">
-                                              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-muted-foreground text-sm font-medium">
-                                                v2
-                                              </div>
-                                              <div>
-                                                <div className="font-medium">Previous Version</div>
-                                                <div className="text-sm text-muted-foreground">Updated 1 day ago</div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <div className="text-sm text-muted-foreground mb-3">
-                                            Initial design with basic layout and structure
-                                          </div>
-                                          <div className="space-y-2 mb-3">
-                                            <div className="text-sm font-medium">Files (2)</div>
-                                            <div className="space-y-1">
-                                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                                <div className="flex items-center gap-2">
-                                                  <Image className="h-4 w-4 text-blue-500" />
-                                                  <span className="text-sm">homepage-v2.png</span>
-                                                  <span className="text-xs text-muted-foreground">(1.9 MB)</span>
-                                                </div>
-                                                <Button variant="outline" size="sm">
-                                                  <Download className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <Button variant="outline" size="sm">
-                                            <Eye className="h-4 w-4 mr-2" />
-                                            View Design
-                                          </Button>
-                                        </div>
-
-                                        <div className="border rounded-lg p-4">
-                                          <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-3">
-                                              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-muted-foreground text-sm font-medium">
-                                                v1
-                                              </div>
-                                              <div>
-                                                <div className="font-medium">First Draft</div>
-                                                <div className="text-sm text-muted-foreground">Updated 3 days ago</div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <div className="text-sm text-muted-foreground mb-3">
-                                            Initial concept and wireframes
-                                          </div>
-                                          <div className="space-y-2 mb-3">
-                                            <div className="text-sm font-medium">Files (1)</div>
-                                            <div className="space-y-1">
-                                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                                <div className="flex items-center gap-2">
-                                                  <File className="h-4 w-4 text-gray-500" />
-                                                  <span className="text-sm">wireframes-v1.pdf</span>
-                                                  <span className="text-xs text-muted-foreground">(0.8 MB)</span>
-                                                </div>
-                                                <Button variant="outline" size="sm">
-                                                  <Download className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                          <Button variant="outline" size="sm">
-                                            <Eye className="h-4 w-4 mr-2" />
-                                            View Design
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </TabsContent>
+                                   <TabsContent value="versions" className="space-y-4 mt-4">
+                                     <div className="space-y-3">
+                                       <div className="flex items-center justify-between">
+                                         <h4 className="font-medium">Design Version History</h4>
+                                       </div>
+                                       
+                                       <div className="space-y-3">
+                                         {selectedProject && projectDesignVersions[selectedProject.id] && projectDesignVersions[selectedProject.id].length > 0 ? (
+                                           projectDesignVersions[selectedProject.id].map((version) => (
+                                             <div key={version.id} className={`border rounded-lg p-4 ${version.is_latest ? 'bg-green-50' : ''}`}>
+                                               <div className="flex items-center justify-between mb-3">
+                                                 <div className="flex items-center gap-3">
+                                                   <div className={`w-8 h-8 ${version.is_latest ? 'bg-primary' : 'bg-muted'} rounded-full flex items-center justify-center ${version.is_latest ? 'text-white' : 'text-muted-foreground'} text-sm font-medium`}>
+                                                     v{version.version_number}
+                                                   </div>
+                                                   <div>
+                                                     <div className="font-medium">{version.name}</div>
+                                                     <div className="text-sm text-muted-foreground">
+                                                       {new Date(version.created_at).toLocaleDateString()} at {new Date(version.created_at).toLocaleTimeString()}
+                                                     </div>
+                                                   </div>
+                                                 </div>
+                                                 {version.is_latest && (
+                                                   <Badge className="bg-green-100 text-green-800">Current</Badge>
+                                                 )}
+                                               </div>
+                                               
+                                               {version.description && (
+                                                 <div className="text-sm text-muted-foreground mb-3">
+                                                   {version.description}
+                                                 </div>
+                                               )}
+                                               
+                                               {/* Version Files */}
+                                               <div className="space-y-2 mb-3">
+                                                 {versionFiles[version.id] && versionFiles[version.id].length > 0 ? (
+                                                   <>
+                                                     <div className="text-sm font-medium">Files ({versionFiles[version.id].length})</div>
+                                                     <div className="space-y-1">
+                                                       {versionFiles[version.id].map((file) => (
+                                                         <div key={file.id} className={`flex items-center justify-between p-2 ${version.is_latest ? 'bg-white' : 'bg-gray-50'} rounded border`}>
+                                                           <div className="flex items-center gap-2">
+                                                             {file.file_type.startsWith('image/') ? (
+                                                               <Image className="h-4 w-4 text-blue-500" />
+                                                             ) : (
+                                                               <File className="h-4 w-4 text-purple-500" />
+                                                             )}
+                                                             <span className="text-sm">{file.file_name}</span>
+                                                             {file.file_size && (
+                                                               <span className="text-xs text-muted-foreground">
+                                                                 ({(file.file_size / 1024 / 1024).toFixed(1)} MB)
+                                                               </span>
+                                                             )}
+                                                           </div>
+                                                           <Button 
+                                                             variant="outline" 
+                                                             size="sm"
+                                                             onClick={() => window.open(file.file_url, '_blank')}
+                                                           >
+                                                             <Download className="h-4 w-4" />
+                                                           </Button>
+                                                         </div>
+                                                       ))}
+                                                     </div>
+                                                   </>
+                                                 ) : (
+                                                   <div className="text-sm text-muted-foreground">No files uploaded yet</div>
+                                                 )}
+                                               </div>
+                                               
+                                               <Button 
+                                                 variant="outline" 
+                                                 size="sm"
+                                                 onClick={() => setSelectedVersion(version)}
+                                               >
+                                                 <Eye className="h-4 w-4 mr-2" />
+                                                 View Details
+                                               </Button>
+                                             </div>
+                                           ))
+                                         ) : (
+                                           <div className="text-center text-muted-foreground py-8">
+                                             No design versions found for this project
+                                           </div>
+                                         )}
+                                       </div>
+                                     </div>
+                                   </TabsContent>
 
 
-                                  <TabsContent value="feedback" className="space-y-4 mt-4">
-                                    <div className="space-y-3">
-                                      <h4 className="font-medium">Client Feedback</h4>
-                                      <div className="space-y-4">
-                                        <div className="border rounded-lg p-4">
-                                          <div className="flex items-start gap-3">
-                                            <Avatar className="w-8 h-8">
-                                              <AvatarFallback className="bg-blue-100 text-blue-600">
-                                                {getInitials(project.client)}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-2">
-                                                <span className="font-medium">{project.client}</span>
-                                                <span className="text-sm text-muted-foreground">3 hours ago</span>
-                                              </div>
-                                              <div className="text-sm mb-3">
-                                                "The latest design iteration looks fantastic! I'm particularly impressed with the user experience flow and the attention to detail in the interface elements. The color palette aligns perfectly with our brand identity."
-                                              </div>
-                                              <div className="flex items-center gap-2">
-                                                <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                                                <Badge variant="outline" className="text-xs">Design v3</Badge>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="border rounded-lg p-4">
-                                          <div className="flex items-start gap-3">
-                                            <Avatar className="w-8 h-8">
-                                              <AvatarFallback className="bg-blue-100 text-blue-600">
-                                                {getInitials(project.client)}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-2">
-                                                <span className="font-medium">{project.client}</span>
-                                                <span className="text-sm text-muted-foreground">2 days ago</span>
-                                              </div>
-                                              <div className="text-sm mb-3">
-                                                "Good progress on the design! A few suggestions: 1) Can we adjust the typography for better readability? 2) The navigation could be more prominent. 3) Consider adding more whitespace in the content areas."
-                                              </div>
-                                              <div className="flex items-center gap-2">
-                                                <Badge className="bg-yellow-100 text-yellow-800">Revision Requested</Badge>
-                                                <Badge variant="outline" className="text-xs">Design v2</Badge>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="border rounded-lg p-4">
-                                          <div className="flex items-start gap-3">
-                                            <Avatar className="w-8 h-8">
-                                              <AvatarFallback className="bg-blue-100 text-blue-600">
-                                                {getInitials(project.client)}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                              <div className="flex items-center gap-2 mb-2">
-                                                <span className="font-medium">{project.client}</span>
-                                                <span className="text-sm text-muted-foreground">4 days ago</span>
-                                              </div>
-                                              <div className="text-sm mb-3">
-                                                "Thank you for the initial design concepts. The overall direction looks promising. We'd like to see some variations in the layout and explore different color options for the primary elements."
-                                              </div>
-                                              <div className="flex items-center gap-2">
-                                                <Badge className="bg-blue-100 text-blue-800">Initial Review</Badge>
-                                                <Badge variant="outline" className="text-xs">Design v1</Badge>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </TabsContent>
+                                   <TabsContent value="feedback" className="space-y-4 mt-4">
+                                     <div className="space-y-3">
+                                       <h4 className="font-medium">Client Feedback</h4>
+                                       <div className="space-y-4">
+                                         {selectedProject && projectDesignVersions[selectedProject.id] ? (() => {
+                                           // Collect all feedback for all versions
+                                           const allFeedback: Array<{feedback: Feedback, version: DesignVersion}> = [];
+                                           projectDesignVersions[selectedProject.id].forEach(version => {
+                                             if (feedback[version.id]) {
+                                               feedback[version.id].forEach(fb => {
+                                                 allFeedback.push({ feedback: fb, version });
+                                               });
+                                             }
+                                           });
+                                           
+                                           // Sort by creation date, most recent first
+                                           allFeedback.sort((a, b) => new Date(b.feedback.created_at).getTime() - new Date(a.feedback.created_at).getTime());
+                                           
+                                           if (allFeedback.length === 0) {
+                                             return (
+                                               <div className="text-center text-muted-foreground py-8">
+                                                 No client feedback yet for this project
+                                               </div>
+                                             );
+                                           }
+                                           
+                                           return allFeedback.map(({ feedback: fb, version }) => (
+                                             <div key={fb.id} className="border rounded-lg p-4">
+                                               <div className="flex items-start gap-3">
+                                                 <Avatar className="w-8 h-8">
+                                                   <AvatarFallback className="bg-blue-100 text-blue-600">
+                                                     {getInitials(selectedProject.client)}
+                                                   </AvatarFallback>
+                                                 </Avatar>
+                                                 <div className="flex-1">
+                                                   <div className="flex items-center gap-2 mb-2">
+                                                     <span className="font-medium">{selectedProject.client}</span>
+                                                     <span className="text-sm text-muted-foreground">
+                                                       {new Date(fb.created_at).toLocaleDateString()} at {new Date(fb.created_at).toLocaleTimeString()}
+                                                     </span>
+                                                   </div>
+                                                   <div className="text-sm mb-3">
+                                                     "{fb.content}"
+                                                   </div>
+                                                   <div className="flex items-center gap-2">
+                                                     <Badge className={
+                                                       fb.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                       fb.status === 'revision_requested' ? 'bg-yellow-100 text-yellow-800' :
+                                                       'bg-blue-100 text-blue-800'
+                                                     }>
+                                                       {fb.status.charAt(0).toUpperCase() + fb.status.slice(1).replace('_', ' ')}
+                                                     </Badge>
+                                                     <Badge variant="outline" className="text-xs">
+                                                       {version.name} v{version.version_number}
+                                                     </Badge>
+                                                     {fb.rating && (
+                                                       <div className="flex items-center gap-1">
+                                                         {Array.from({ length: 5 }, (_, i) => (
+                                                           <Star 
+                                                             key={i} 
+                                                             className={`h-3 w-3 ${i < fb.rating! ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                                                           />
+                                                         ))}
+                                                       </div>
+                                                     )}
+                                                   </div>
+                                                 </div>
+                                               </div>
+                                             </div>
+                                           ));
+                                         })() : (
+                                           <div className="text-center text-muted-foreground py-8">
+                                             No feedback available for this project
+                                           </div>
+                                         )}
+                                       </div>
+                                     </div>
+                                   </TabsContent>
                                 </Tabs>
                               </DialogContent>
                             </Dialog>
