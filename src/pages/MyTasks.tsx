@@ -129,16 +129,15 @@ const MyTasks = () => {
     try {
       setLoading(true);
       
-      // Bypass TypeScript issues by using any and manual query building
-      const supabaseClient: any = supabase;
-      const result = await supabaseClient
+      // Fetch projects where the current user is assigned as designer
+      const { data, error } = await supabase
         .from('projects')
         .select('*')
         .eq('designer', user.email)
         .order('created_at', { ascending: false });
       
-      if (result.error) {
-        console.error('Error fetching projects:', result.error);
+      if (error) {
+        console.error('Error fetching projects:', error);
         toast({
           title: "Error",
           description: "Failed to fetch your projects",
@@ -146,7 +145,8 @@ const MyTasks = () => {
         });
         return;
       }
-      setProjects(result.data || []);
+      
+      setProjects(data || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
