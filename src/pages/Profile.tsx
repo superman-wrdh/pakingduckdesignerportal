@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -22,15 +23,18 @@ import {
   Upload,
   FileImage,
   Trash2,
-  Loader2
+  Loader2,
+  Circle
 } from "lucide-react";
 
 interface Profile {
   id: string;
   user_id: string;
+  name: string | null;
   email: string | null;
   phone: string | null;
-  company: string | null;
+  location: string | null;
+  status: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,7 +69,7 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('designer_profiles')
         .select('*')
         .eq('user_id', user?.id)
         .single();
@@ -82,13 +86,15 @@ const Profile = () => {
         // Create a new profile if none exists
         const newProfile = {
           user_id: user?.id,
+          name: user?.user_metadata?.name || null,
           email: user?.email || null,
-          phone: null,
-          company: user?.user_metadata?.company || null,
+          phone: user?.user_metadata?.phone || null,
+          location: null,
+          status: 'active',
         };
 
         const { data: newData, error: insertError } = await supabase
-          .from('profiles')
+          .from('designer_profiles')
           .insert([newProfile])
           .select()
           .single();
@@ -142,7 +148,7 @@ const Profile = () => {
     setIsSaving(true);
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('designer_profiles')
         .update(editedProfile)
         .eq('user_id', user.id);
 
@@ -374,8 +380,14 @@ const Profile = () => {
               {!isEditing ? (
                 <>
                   <div>
-                    <h3 className="text-xl font-semibold">{profile.email || 'User'}</h3>
-                    <p className="text-muted-foreground">{profile.company || 'Company'}</p>
+                    <h3 className="text-xl font-semibold">{profile.name || profile.email || 'User'}</h3>
+                    <p className="text-muted-foreground">{profile.location || 'Location not set'}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Circle className={`h-3 w-3 ${profile.status === 'active' ? 'text-green-500' : 'text-yellow-500'}`} />
+                    <span className="text-sm text-muted-foreground capitalize">
+                      {profile.status || 'active'}
+                    </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Phone: {profile.phone || 'Not provided'}
@@ -383,6 +395,15 @@ const Profile = () => {
                 </>
               ) : (
                 <div className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      value={editedProfile.name || ''}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="Enter your name"
+                    />
+                  </div>
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -393,12 +414,12 @@ const Profile = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="company">Company</Label>
+                    <Label htmlFor="location">Location</Label>
                     <Input
-                      id="company"
-                      value={editedProfile.company || ''}
-                      onChange={(e) => handleInputChange('company', e.target.value)}
-                      placeholder="Enter company name"
+                      id="location"
+                      value={editedProfile.location || ''}
+                      onChange={(e) => handleInputChange('location', e.target.value)}
+                      placeholder="Enter location"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -409,6 +430,21 @@ const Profile = () => {
                       onChange={(e) => handleInputChange('phone', e.target.value)}
                       placeholder="Enter phone number"
                     />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={editedProfile.status || 'active'}
+                      onValueChange={(value) => handleInputChange('status', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="busy">Busy</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
@@ -445,10 +481,10 @@ const Profile = () => {
             <div className="flex items-center gap-3">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               {!isEditing ? (
-                <span className="text-sm">{profile.company || 'No company'}</span>
+                <span className="text-sm">{profile.location || 'No location'}</span>
               ) : (
                 <span className="text-sm text-muted-foreground">
-                  Company updated above
+                  Location updated above
                 </span>
               )}
             </div>
