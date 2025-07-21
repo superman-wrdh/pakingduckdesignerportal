@@ -437,9 +437,6 @@ const Profile = () => {
                     <h3 className="text-xl font-semibold">{profile.name || profile.email || 'User'}</h3>
                     <p className="text-muted-foreground">{profile.location || 'Location not set'}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Circle className={`h-3 w-3 ${profile.status === 'active' ? 'text-green-500' : 'text-yellow-500'}`} />
-                  </div>
                   <p className="text-sm text-muted-foreground">
                     Phone: {profile.phone || 'Not provided'}
                   </p>
