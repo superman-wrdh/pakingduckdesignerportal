@@ -439,9 +439,6 @@ const Profile = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Circle className={`h-3 w-3 ${profile.status === 'active' ? 'text-green-500' : 'text-yellow-500'}`} />
-                    <span className="text-sm text-muted-foreground capitalize">
-                      {profile.status || 'active'}
-                    </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Phone: {profile.phone || 'Not provided'}
