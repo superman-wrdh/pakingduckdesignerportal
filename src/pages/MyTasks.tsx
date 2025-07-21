@@ -43,6 +43,7 @@ interface Design {
 interface DesignVersion {
   id: string;
   project_id: string;
+  design_id?: string;
   version_number: number;
   name: string;
   description: string | null;
@@ -300,6 +301,12 @@ const MyTasks = () => {
   // Create initial version when opening project details
   const handleViewProject = async (project: Project) => {
     setSelectedProject(project);
+    
+    // Fetch designs for this project if not already fetched
+    if (!projectDesigns[project.id]) {
+      await fetchAllProjectDesigns();
+    }
+    
     await fetchDesignVersions(project.id);
     
     // Fetch version files for all versions of this project
@@ -813,6 +820,68 @@ const MyTasks = () => {
                                     View project files, design versions, and client feedback
                                   </DialogDescription>
                                 </DialogHeader>
+
+                                {/* Project Description with Design Details */}
+                                <div className="border rounded-lg p-4 mb-4 bg-muted/50">
+                                  <h4 className="font-medium mb-3">Project Description & Design Details</h4>
+                                  {project.description && (
+                                    <div className="mb-4">
+                                      <p className="text-sm text-muted-foreground">{project.description}</p>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Design Information from designs table */}
+                                  <div className="space-y-3">
+                                    <h5 className="font-medium text-sm">Included Designs:</h5>
+                                    {selectedProject && projectDesigns[selectedProject.id] && projectDesigns[selectedProject.id].length > 0 ? (
+                                      <div className="space-y-2">
+                                        {projectDesigns[selectedProject.id].map((design) => (
+                                          <div key={design.id} className="border rounded p-3 bg-background">
+                                            <div className="flex items-start justify-between mb-2">
+                                              <div className="flex-1">
+                                                <h6 className="font-medium text-sm">{design.name}</h6>
+                                                {design.description && (
+                                                  <p className="text-xs text-muted-foreground mt-1">{design.description}</p>
+                                                )}
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Show latest version files as attachments */}
+                                            {projectDesignVersions[selectedProject.id] && (() => {
+                                              const designVersions = projectDesignVersions[selectedProject.id].filter(v => v.design_id === design.id);
+                                              const latestVersion = designVersions.find(v => v.is_latest);
+                                              if (latestVersion && versionFiles[latestVersion.id] && versionFiles[latestVersion.id].length > 0) {
+                                                return (
+                                                  <div className="mt-2">
+                                                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                                                      Attachments ({versionFiles[latestVersion.id].length})
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                      {versionFiles[latestVersion.id].map((file) => (
+                                                        <div key={file.id} className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded">
+                                                          {file.file_type.startsWith('image/') ? (
+                                                            <Image className="h-3 w-3" />
+                                                          ) : (
+                                                            <File className="h-3 w-3" />
+                                                          )}
+                                                          <span>{file.file_name}</span>
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              }
+                                              return null;
+                                            })()}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">No designs found for this project</p>
+                                    )}
+                                  </div>
+                                </div>
+
                                  <Tabs defaultValue="versions" className="w-full">
                                    <TabsList className="grid w-full grid-cols-2">
                                      <TabsTrigger value="versions">
