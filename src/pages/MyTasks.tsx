@@ -29,6 +29,16 @@ interface Project {
   user_id: string;
 }
 
+interface Design {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
 interface DesignVersion {
   id: string;
   project_id: string;
@@ -81,16 +91,21 @@ const MyTasks = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [designs, setDesigns] = useState<Design[]>([]);
+  const [projectDesigns, setProjectDesigns] = useState<{ [key: string]: Design[] }>({});
   const [designVersions, setDesignVersions] = useState<DesignVersion[]>([]);
   const [projectDesignVersions, setProjectDesignVersions] = useState<{ [key: string]: DesignVersion[] }>({});
   const [versionFiles, setVersionFiles] = useState<{ [key: string]: VersionFile[] }>({});
   const [annotations, setAnnotations] = useState<{ [key: string]: Annotation[] }>({});
   const [feedback, setFeedback] = useState<{ [key: string]: Feedback[] }>({});
   const [selectedVersion, setSelectedVersion] = useState<DesignVersion | null>(null);
+  const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
   const [newFeedback, setNewFeedback] = useState("");
   const [newRating, setNewRating] = useState<number>(5);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showUploadDraftDialog, setShowUploadDraftDialog] = useState(false);
   const [uploadProjectId, setUploadProjectId] = useState<string | null>(null);
+  const [uploadDesignId, setUploadDesignId] = useState<string | null>(null);
   const [uploadDesignName, setUploadDesignName] = useState("");
   const [uploadDesignDescription, setUploadDesignDescription] = useState("");
   const { toast } = useToast();
@@ -103,6 +118,7 @@ const MyTasks = () => {
 
   useEffect(() => {
     if (projects.length > 0) {
+      fetchAllProjectDesigns();
       fetchAllProjectDesignVersions();
     }
   }, [projects]);
@@ -135,6 +151,36 @@ const MyTasks = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch all designs for all projects
+  const fetchAllProjectDesigns = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('designs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching designs:', error);
+        return;
+      }
+      
+      // Group designs by project_id
+      const designsByProject: { [key: string]: Design[] } = {};
+      data?.forEach(design => {
+        if (!designsByProject[design.project_id]) {
+          designsByProject[design.project_id] = [];
+        }
+        designsByProject[design.project_id].push(design);
+      });
+      
+      setProjectDesigns(designsByProject);
+    } catch (error) {
+      console.error('Error fetching designs:', error);
     }
   };
 
@@ -194,12 +240,20 @@ const MyTasks = () => {
     await fetchDesignVersions(project.id);
   };
 
-  // Handle upload button click
+  // Handle upload button click - for creating new design
   const handleUploadClick = (projectId: string) => {
     setUploadProjectId(projectId);
     setShowUploadDialog(true);
     setUploadDesignName("");
     setUploadDesignDescription("");
+  };
+
+  // Handle upload draft button click - for uploading to existing design
+  const handleUploadDraftClick = (designId: string) => {
+    const design = designs.find(d => d.id === designId);
+    setSelectedDesign(design || null);
+    setUploadDesignId(designId);
+    setShowUploadDraftDialog(true);
   };
 
   // Handle design upload
@@ -295,7 +349,8 @@ const MyTasks = () => {
         description: `Uploaded design version "${uploadDesignName}" with ${files.length} files`,
       });
 
-      // Refresh design versions data
+      // Refresh data
+      await fetchAllProjectDesigns();
       await fetchAllProjectDesignVersions();
       
       // Close dialog and reset state
@@ -309,6 +364,129 @@ const MyTasks = () => {
       toast({
         title: "Error",
         description: "Failed to upload design files",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  // Handle design draft upload
+  const handleUploadDraft = async (files: FileList | null) => {
+    if (!files || !uploadDesignId || !user) {
+      toast({
+        title: "Error",
+        description: "Please select files to upload",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setUploading(uploadDesignId);
+
+      // Find the design to get its info
+      const design = designs.find(d => d.id === uploadDesignId);
+      if (!design) {
+        toast({
+          title: "Error",
+          description: "Design not found",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Get next version number for this design/project
+      const existingVersions = projectDesignVersions[design.project_id] || [];
+      const nextVersionNumber = existingVersions.length > 0 
+        ? Math.max(...existingVersions.map(v => v.version_number)) + 1 
+        : 1;
+
+      // Create new design version entry using design's name and description
+      const { data: versionData, error: versionError } = await supabase
+        .from('design_versions')
+        .insert({
+          project_id: design.project_id,
+          name: design.name, // Use design's name
+          description: design.description, // Use design's description
+          version_number: nextVersionNumber,
+          is_latest: true,
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (versionError) {
+        console.error('Error creating design version:', versionError);
+        toast({
+          title: "Error",
+          description: "Failed to create design version",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update previous versions to not be latest
+      if (existingVersions.length > 0) {
+        await supabase
+          .from('design_versions')
+          .update({ is_latest: false })
+          .eq('project_id', design.project_id)
+          .neq('id', versionData.id);
+      }
+
+      // Upload files to storage
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${user.id}/${design.project_id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          throw uploadError;
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('project-files')
+          .getPublicUrl(filePath);
+
+        // Create version file record
+        return await supabase
+          .from('version_files')
+          .insert({
+            version_id: versionData.id,
+            file_name: file.name,
+            file_url: publicUrl,
+            file_type: file.type,
+            file_size: file.size,
+            user_id: user.id
+          });
+      });
+
+      await Promise.all(uploadPromises);
+
+      toast({
+        title: "Success",
+        description: `Uploaded draft for design "${design.name}" with ${files.length} files`,
+      });
+
+      // Refresh data
+      await fetchAllProjectDesignVersions();
+      
+      // Close dialog and reset state
+      setShowUploadDraftDialog(false);
+      setUploadDesignId(null);
+
+    } catch (error) {
+      console.error('Error uploading draft:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload draft files",
         variant: "destructive"
       });
     } finally {
@@ -499,13 +677,45 @@ const MyTasks = () => {
 
                         <Separator />
 
-                         <div className="space-y-2">
-                           <div className="flex items-center justify-between">
-                             <span className="text-sm font-medium">Design Versions</span>
-                              <span className="text-sm text-muted-foreground">
-                                {projectDesignVersions[project.id]?.length || 0} versions
-                              </span>
-                            </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Designs</span>
+                               <span className="text-sm text-muted-foreground">
+                                 {projectDesigns[project.id]?.length || 0} designs
+                               </span>
+                             </div>
+                             
+                             {/* Show existing designs */}
+                             {projectDesigns[project.id] && projectDesigns[project.id].length > 0 && (
+                               <div className="space-y-1 max-h-32 overflow-y-auto">
+                                 {projectDesigns[project.id].slice(0, 3).map(design => (
+                                   <div key={design.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
+                                     <div>
+                                       <span className="font-medium">{design.name}</span>
+                                       {design.description && (
+                                         <span className="text-muted-foreground block truncate max-w-[120px]">
+                                           {design.description}
+                                         </span>
+                                       )}
+                                     </div>
+                                     <Button 
+                                       variant="ghost" 
+                                       size="sm" 
+                                       className="h-6 px-2"
+                                       onClick={() => handleUploadDraftClick(design.id)}
+                                       disabled={uploading === design.id}
+                                     >
+                                       <Upload className="h-3 w-3" />
+                                     </Button>
+                                   </div>
+                                 ))}
+                                 {projectDesigns[project.id].length > 3 && (
+                                   <div className="text-xs text-muted-foreground text-center">
+                                     +{projectDesigns[project.id].length - 3} more designs
+                                   </div>
+                                 )}
+                               </div>
+                             )}
 
                             <div className="flex gap-2">
                               <Dialog>
@@ -516,15 +726,15 @@ const MyTasks = () => {
                                   </Button>
                                 </DialogTrigger>
                                 
-                              <Button 
-                                variant="default" 
-                                size="sm" 
-                                onClick={() => handleUploadClick(project.id)}
-                                disabled={uploading === project.id}
-                              >
-                                <Upload className="h-4 w-4 mr-1" />
-                                Upload
-                              </Button>
+                               <Button 
+                                 variant="default" 
+                                 size="sm" 
+                                 onClick={() => handleUploadClick(project.id)}
+                                 disabled={uploading === project.id}
+                               >
+                                 <Upload className="h-4 w-4 mr-1" />
+                                 New Design
+                               </Button>
                               <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Project Details - {project.name}</DialogTitle>
@@ -912,6 +1122,51 @@ const MyTasks = () => {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     Uploading design files... Please wait.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Upload Draft Dialog */}
+        <Dialog open={showUploadDraftDialog} onOpenChange={setShowUploadDraftDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload Draft</DialogTitle>
+              <DialogDescription>
+                Upload draft files for existing design
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {selectedDesign && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="text-sm font-medium">{selectedDesign.name}</div>
+                  {selectedDesign.description && (
+                    <div className="text-sm text-muted-foreground">{selectedDesign.description}</div>
+                  )}
+                </div>
+              )}
+              
+              <div>
+                <Label htmlFor="draft-files">Draft Files *</Label>
+                <Input
+                  id="draft-files"
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.fig,.sketch,.psd,.ai"
+                  onChange={(e) => handleUploadDraft(e.target.files)}
+                  className="mt-1"
+                  disabled={uploading === uploadDesignId}
+                />
+              </div>
+              
+              {uploading === uploadDesignId && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Uploading draft files... Please wait.
                   </AlertDescription>
                 </Alert>
               )}
