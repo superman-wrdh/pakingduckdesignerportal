@@ -41,6 +41,16 @@ interface DesignVersion {
   user_id: string;
 }
 
+interface Design {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
 interface VersionFile {
   id: string;
   version_id: string;
@@ -82,12 +92,17 @@ const MyTasks = () => {
   const [uploading, setUploading] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [designVersions, setDesignVersions] = useState<DesignVersion[]>([]);
+  const [designs, setDesigns] = useState<{ [key: string]: Design[] }>({});
   const [versionFiles, setVersionFiles] = useState<{ [key: string]: VersionFile[] }>({});
   const [annotations, setAnnotations] = useState<{ [key: string]: Annotation[] }>({});
   const [feedback, setFeedback] = useState<{ [key: string]: Feedback[] }>({});
   const [selectedVersion, setSelectedVersion] = useState<DesignVersion | null>(null);
   const [newFeedback, setNewFeedback] = useState("");
   const [newRating, setNewRating] = useState<number>(5);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [uploadProjectId, setUploadProjectId] = useState<string | null>(null);
+  const [uploadDesignName, setUploadDesignName] = useState("");
+  const [uploadDesignDescription, setUploadDesignDescription] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
   useEffect(() => {
@@ -95,6 +110,12 @@ const MyTasks = () => {
       fetchUserProjects();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (projects.length > 0) {
+      fetchAllDesigns();
+    }
+  }, [projects]);
   const fetchUserProjects = async () => {
     if (!user) return;
     try {
@@ -126,6 +147,36 @@ const MyTasks = () => {
       setLoading(false);
     }
   };
+
+  // Fetch all designs for all projects
+  const fetchAllDesigns = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('designs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching designs:', error);
+        return;
+      }
+      
+      // Group designs by project_id
+      const designsByProject: { [key: string]: Design[] } = {};
+      data?.forEach(design => {
+        if (!designsByProject[design.project_id]) {
+          designsByProject[design.project_id] = [];
+        }
+        designsByProject[design.project_id].push(design);
+      });
+      
+      setDesigns(designsByProject);
+    } catch (error) {
+      console.error('Error fetching designs:', error);
+    }
+  };
   // Fetch design versions for a project
   const fetchDesignVersions = async (projectId: string) => {
     if (!user) return;
@@ -151,6 +202,106 @@ const MyTasks = () => {
   const handleViewProject = async (project: Project) => {
     setSelectedProject(project);
     await fetchDesignVersions(project.id);
+  };
+
+  // Handle upload button click
+  const handleUploadClick = (projectId: string) => {
+    setUploadProjectId(projectId);
+    setShowUploadDialog(true);
+    setUploadDesignName("");
+    setUploadDesignDescription("");
+  };
+
+  // Handle design upload
+  const handleUploadDesign = async (files: FileList | null) => {
+    if (!files || !uploadProjectId || !user || !uploadDesignName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide design name and select files to upload",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setUploading(uploadProjectId);
+
+      // Create new design entry
+      const { data: designData, error: designError } = await supabase
+        .from('designs')
+        .insert({
+          project_id: uploadProjectId,
+          name: uploadDesignName.trim(),
+          description: uploadDesignDescription.trim() || null,
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (designError) {
+        console.error('Error creating design:', designError);
+        toast({
+          title: "Error",
+          description: "Failed to create design entry",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Upload files to storage
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${user.id}/${uploadProjectId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('project-files')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          throw uploadError;
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('project-files')
+          .getPublicUrl(filePath);
+
+        return {
+          file_name: file.name,
+          file_url: publicUrl,
+          file_type: file.type,
+          file_size: file.size
+        };
+      });
+
+      const uploadedFiles = await Promise.all(uploadPromises);
+
+      toast({
+        title: "Success",
+        description: `Uploaded ${uploadedFiles.length} files for design "${uploadDesignName}"`,
+      });
+
+      // Refresh designs data
+      await fetchAllDesigns();
+      
+      // Close dialog and reset state
+      setShowUploadDialog(false);
+      setUploadProjectId(null);
+      setUploadDesignName("");
+      setUploadDesignDescription("");
+
+    } catch (error) {
+      console.error('Error uploading design:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload design files",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(null);
+    }
   };
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -336,22 +487,32 @@ const MyTasks = () => {
 
                         <Separator />
 
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Files</span>
-                             <span className="text-sm text-muted-foreground">
-                               {designVersions.length} versions
-                             </span>
-                           </div>
+                         <div className="space-y-2">
+                           <div className="flex items-center justify-between">
+                             <span className="text-sm font-medium">Designs</span>
+                              <span className="text-sm text-muted-foreground">
+                                {designs[project.id]?.length || 0} designs
+                              </span>
+                            </div>
 
-                           <div className="flex gap-2">
-                             <Dialog>
-                               <DialogTrigger asChild>
-                                 <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewProject(project)}>
-                                   <Eye className="h-4 w-4 mr-1" />
-                                   View Design
-                                 </Button>
-                               </DialogTrigger>
+                            <div className="flex gap-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewProject(project)}>
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View Design
+                                  </Button>
+                                </DialogTrigger>
+                                
+                              <Button 
+                                variant="default" 
+                                size="sm" 
+                                onClick={() => handleUploadClick(project.id)}
+                                disabled={uploading === project.id}
+                              >
+                                <Upload className="h-4 w-4 mr-1" />
+                                Upload
+                              </Button>
                               <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Project Details - {project.name}</DialogTitle>
