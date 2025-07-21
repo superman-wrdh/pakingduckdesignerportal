@@ -502,9 +502,6 @@ const Profile = () => {
                   </div>
                 </div>
               )}
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">Brand Development</Badge>
-              </div>
             </div>
           </div>
 
