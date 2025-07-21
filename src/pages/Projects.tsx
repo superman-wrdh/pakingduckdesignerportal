@@ -110,11 +110,27 @@ const Projects = () => {
     }
 
     try {
+      // Get user's profile name from designer_profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('designer_profiles')
+        .select('name')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profileData?.name) {
+        toast({
+          title: "Error",
+          description: "Please complete your profile before adding projects to tasks.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('projects')
         .update({ 
           status: 'design stage',
-          designer: user.email
+          designer: profileData.name
         })
         .eq('id', projectId);
 

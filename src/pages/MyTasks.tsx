@@ -129,11 +129,25 @@ const MyTasks = () => {
     try {
       setLoading(true);
       
-      // Fetch projects where the current user is assigned as designer
+      // Get user's profile name first
+      const { data: profileData, error: profileError } = await supabase
+        .from('designer_profiles')
+        .select('name')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !profileData?.name) {
+        console.error('Error fetching profile:', profileError);
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch projects where the current user is assigned as designer by name
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('designer', user.email)
+        .eq('designer', profileData.name)
         .order('created_at', { ascending: false });
       
       if (error) {
