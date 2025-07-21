@@ -151,6 +151,42 @@ export type Database = {
           },
         ]
       }
+      designer_profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          location: string | null
+          name: string | null
+          phone: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          location?: string | null
+          name?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          location?: string | null
+          name?: string | null
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       designs: {
         Row: {
           created_at: string
@@ -446,6 +482,7 @@ export type Database = {
           client: string
           created_at: string
           description: string | null
+          designer: string | null
           due_date: string
           id: string
           name: string
@@ -458,6 +495,7 @@ export type Database = {
           client: string
           created_at?: string
           description?: string | null
+          designer?: string | null
           due_date: string
           id?: string
           name: string
@@ -470,6 +508,7 @@ export type Database = {
           client?: string
           created_at?: string
           description?: string | null
+          designer?: string | null
           due_date?: string
           id?: string
           name?: string
