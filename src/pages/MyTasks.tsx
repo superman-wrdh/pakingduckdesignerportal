@@ -27,7 +27,6 @@ interface Project {
   created_at: string;
   updated_at: string;
   user_id: string;
-  designer?: string;
 }
 
 interface Design {
@@ -124,15 +123,15 @@ const MyTasks = () => {
     }
   }, [projects]);
   const fetchUserProjects = async () => {
-    if (!user?.email) return;
+    if (!user) return;
     try {
       setLoading(true);
       const {
         data,
         error
-      } = await supabase.from('projects').select('*').eq('designer', user.email).order('created_at', {
+      } = await supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', {
         ascending: false
-      }) as any;
+      });
       if (error) {
         console.error('Error fetching projects:', error);
         toast({
