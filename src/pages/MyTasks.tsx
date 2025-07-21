@@ -109,6 +109,7 @@ const MyTasks = () => {
   const [uploadDesignId, setUploadDesignId] = useState<string | null>(null);
   const [uploadDesignName, setUploadDesignName] = useState("");
   const [uploadDesignDescription, setUploadDesignDescription] = useState("");
+  const [draftFiles, setDraftFiles] = useState<FileList | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   useEffect(() => {
@@ -257,6 +258,7 @@ const MyTasks = () => {
     const design = designs.find(d => d.id === designId);
     setSelectedDesign(design || null);
     setUploadDesignId(designId);
+    setDraftFiles(null);
     setShowUploadDraftDialog(true);
   };
 
@@ -485,6 +487,7 @@ const MyTasks = () => {
       // Close dialog and reset state
       setShowUploadDraftDialog(false);
       setUploadDesignId(null);
+      setDraftFiles(null);
 
     } catch (error) {
       console.error('Error uploading draft:', error);
@@ -1151,10 +1154,15 @@ const MyTasks = () => {
                   type="file"
                   multiple
                   accept="image/*,.pdf,.fig,.sketch,.psd,.ai"
-                  onChange={(e) => handleUploadDraft(e.target.files)}
+                  onChange={(e) => setDraftFiles(e.target.files)}
                   className="mt-1"
                   disabled={uploading === uploadDesignId}
                 />
+                {draftFiles && (
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    {draftFiles.length} file(s) selected
+                  </div>
+                )}
               </div>
               
               {uploading === uploadDesignId && (
@@ -1165,6 +1173,27 @@ const MyTasks = () => {
                   </AlertDescription>
                 </Alert>
               )}
+              
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowUploadDraftDialog(false);
+                    setUploadDesignId(null);
+                    setDraftFiles(null);
+                  }}
+                  disabled={uploading === uploadDesignId}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => handleUploadDraft(draftFiles)}
+                  disabled={uploading === uploadDesignId || !draftFiles}
+                  className="flex-1"
+                >
+                  {uploading === uploadDesignId ? "Uploading..." : "Submit"}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
