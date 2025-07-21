@@ -730,15 +730,6 @@ const MyTasks = () => {
                                   </Button>
                                 </DialogTrigger>
                                 
-                               <Button 
-                                 variant="default" 
-                                 size="sm" 
-                                 onClick={() => handleUploadClick(project.id)}
-                                 disabled={uploading === project.id}
-                               >
-                                 <Upload className="h-4 w-4 mr-1" />
-                                 New Design
-                               </Button>
                               <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Project Details - {project.name}</DialogTitle>
