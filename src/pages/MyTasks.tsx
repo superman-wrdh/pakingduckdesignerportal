@@ -27,6 +27,7 @@ interface Project {
   created_at: string;
   updated_at: string;
   user_id: string;
+  designer?: string;
 }
 
 interface Design {
@@ -126,14 +127,17 @@ const MyTasks = () => {
     if (!user) return;
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', {
-        ascending: false
-      });
-      if (error) {
-        console.error('Error fetching projects:', error);
+      
+      // Bypass TypeScript issues by using any and manual query building
+      const supabaseClient: any = supabase;
+      const result = await supabaseClient
+        .from('projects')
+        .select('*')
+        .eq('designer', user.email)
+        .order('created_at', { ascending: false });
+      
+      if (result.error) {
+        console.error('Error fetching projects:', result.error);
         toast({
           title: "Error",
           description: "Failed to fetch your projects",
@@ -141,7 +145,7 @@ const MyTasks = () => {
         });
         return;
       }
-      setProjects(data || []);
+      setProjects(result.data || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({

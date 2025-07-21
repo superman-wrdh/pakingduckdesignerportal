@@ -114,7 +114,7 @@ const Projects = () => {
         .from('projects')
         .update({ 
           status: 'design stage',
-          user_id: user.id
+          designer: user.email
         })
         .eq('id', projectId);
 
