@@ -383,11 +383,65 @@ const Profile = () => {
                     <h3 className="text-xl font-semibold">{profile.name || profile.email || 'User'}</h3>
                     <p className="text-muted-foreground">{profile.location || 'Location not set'}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Circle className={`h-3 w-3 ${profile.status === 'active' ? 'text-green-500' : 'text-yellow-500'}`} />
-                    <span className="text-sm text-muted-foreground capitalize">
-                      {profile.status || 'active'}
-                    </span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Circle className={`h-3 w-3 ${profile.status === 'active' ? 'text-green-500' : 'text-yellow-500'}`} />
+                      <span className="text-sm text-muted-foreground capitalize">
+                        {profile.status || 'active'}
+                      </span>
+                    </div>
+                    <Select
+                      value={profile.status || 'active'}
+                      onValueChange={async (value) => {
+                        try {
+                          const { error } = await supabase
+                            .from('designer_profiles')
+                            .update({ status: value })
+                            .eq('user_id', user?.id);
+
+                          if (error) {
+                            console.error('Error updating status:', error);
+                            toast({
+                              title: "Error",
+                              description: "Failed to update status",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
+                          setProfile(prev => prev ? { ...prev, status: value } : null);
+                          toast({
+                            title: "Success",
+                            description: "Status updated successfully",
+                          });
+                        } catch (error) {
+                          console.error('Error updating status:', error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to update status",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">
+                          <div className="flex items-center gap-2">
+                            <Circle className="h-3 w-3 text-green-500" />
+                            Active
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="busy">
+                          <div className="flex items-center gap-2">
+                            <Circle className="h-3 w-3 text-yellow-500" />
+                            Busy
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Phone: {profile.phone || 'Not provided'}
