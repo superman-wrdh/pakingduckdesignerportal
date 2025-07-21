@@ -27,7 +27,6 @@ interface Project {
   created_at: string;
   updated_at: string;
   user_id: string;
-  designer?: string | null;
 }
 
 interface Design {
@@ -127,12 +126,14 @@ const MyTasks = () => {
     if (!user) return;
     try {
       setLoading(true);
-      const result = await (supabase.from('projects') as any).select('*').eq('designer', user.email).order('created_at', {
+      const {
+        data,
+        error
+      } = await supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', {
         ascending: false
       });
-      
-      if (result.error) {
-        console.error('Error fetching projects:', result.error);
+      if (error) {
+        console.error('Error fetching projects:', error);
         toast({
           title: "Error",
           description: "Failed to fetch your projects",
@@ -140,8 +141,7 @@ const MyTasks = () => {
         });
         return;
       }
-      
-      setProjects(result.data || []);
+      setProjects(data || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
