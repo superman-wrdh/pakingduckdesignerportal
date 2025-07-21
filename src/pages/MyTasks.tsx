@@ -152,136 +152,6 @@ const MyTasks = () => {
     setSelectedProject(project);
     await fetchDesignVersions(project.id);
   };
-
-  // Handle design upload
-  const handleUploadDesign = async (projectId: string) => {
-    if (!user) return;
-
-    const nameInput = document.getElementById('design-name') as HTMLInputElement;
-    const descriptionInput = document.getElementById('design-description') as HTMLTextAreaElement;
-    const filesInput = document.getElementById('design-files') as HTMLInputElement;
-
-    const designName = nameInput?.value?.trim();
-    const designDescription = descriptionInput?.value?.trim();
-    const files = filesInput?.files;
-
-    if (!designName) {
-      toast({
-        title: "Error",
-        description: "Please enter a design name",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!files || files.length === 0) {
-      toast({
-        title: "Error", 
-        description: "Please select at least one file to upload",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setUploading(projectId);
-
-      // Upload files to storage and create project_attachments records
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const fileName = `${Date.now()}-${file.name}`;
-        const filePath = `designs/${projectId}/${fileName}`;
-
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('project-files')
-          .upload(filePath, file);
-
-        if (uploadError) {
-          console.error('Error uploading file:', uploadError);
-          throw uploadError;
-        }
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('project-files')
-          .getPublicUrl(filePath);
-
-        return {
-          file_name: file.name,
-          file_url: publicUrl,
-          file_size: file.size,
-          file_type: file.type
-        };
-      });
-
-      const uploadedFiles = await Promise.all(uploadPromises);
-
-      // Create a design version record with the uploaded files
-      const { data: versionData, error: versionError } = await supabase
-        .from('design_versions')
-        .insert({
-          project_id: projectId,
-          name: designName,
-          description: designDescription || null,
-          version_number: 1, // This should be calculated based on existing versions
-          is_latest: true,
-          user_id: user.id
-        })
-        .select()
-        .single();
-
-      if (versionError) {
-        console.error('Error creating design version:', versionError);
-        toast({
-          title: "Error",
-          description: "Failed to create design version",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Create version files for each uploaded file
-      const filePromises = uploadedFiles.map(async (file) => {
-        const { error: fileError } = await supabase
-          .from('version_files')
-          .insert({
-            version_id: versionData.id,
-            file_name: file.file_name,
-            file_url: file.file_url,
-            file_size: file.file_size,
-            file_type: file.file_type,
-            user_id: user.id
-          });
-
-        if (fileError) {
-          console.error('Error creating version file:', fileError);
-          throw fileError;
-        }
-      });
-
-      await Promise.all(filePromises);
-
-      toast({
-        title: "Success",
-        description: `Design "${designName}" uploaded successfully with ${files.length} file(s)`,
-      });
-
-      // Clear form
-      if (nameInput) nameInput.value = '';
-      if (descriptionInput) descriptionInput.value = '';
-      if (filesInput) filesInput.value = '';
-
-    } catch (error) {
-      console.error('Error uploading design:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload design files",
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(null);
-    }
-  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case "project initiation":
@@ -482,7 +352,7 @@ const MyTasks = () => {
                                    View Design
                                  </Button>
                                </DialogTrigger>
-                               <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+                              <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Project Details - {project.name}</DialogTitle>
                                   <DialogDescription>
@@ -740,80 +610,12 @@ const MyTasks = () => {
                                   </TabsContent>
                                 </Tabs>
                               </DialogContent>
-                             </Dialog>
+                            </Dialog>
 
-                             <Dialog>
-                               <DialogTrigger asChild>
-                                 <Button variant="outline" size="sm">
-                                   <Upload className="h-4 w-4 mr-1" />
-                                   Upload
-                                 </Button>
-                               </DialogTrigger>
-                               <DialogContent className="sm:max-w-md">
-                                 <DialogHeader>
-                                   <DialogTitle>Upload Design</DialogTitle>
-                                   <DialogDescription>
-                                     Upload design files for {project.name}
-                                   </DialogDescription>
-                                 </DialogHeader>
-                                 <div className="space-y-4">
-                                   <div>
-                                     <Label htmlFor="design-name">Design Name</Label>
-                                     <Input 
-                                       id="design-name" 
-                                       placeholder="Enter design name"
-                                       className="mt-2"
-                                     />
-                                   </div>
-                                   <div>
-                                     <Label htmlFor="design-description">Description (Optional)</Label>
-                                     <Textarea 
-                                       id="design-description" 
-                                       placeholder="Describe your design..."
-                                       className="mt-2"
-                                     />
-                                   </div>
-                                   <div>
-                                     <Label htmlFor="design-files">Design Files</Label>
-                                     <Input 
-                                       id="design-files" 
-                                       type="file" 
-                                       multiple 
-                                       accept="image/*,.pdf,.fig,.sketch,.ai,.psd"
-                                       className="mt-2"
-                                       disabled={uploading === project.id}
-                                     />
-                                   </div>
-                                   {uploading === project.id && (
-                                     <Alert>
-                                       <AlertCircle className="h-4 w-4" />
-                                       <AlertDescription>
-                                         Uploading design files... Please wait.
-                                       </AlertDescription>
-                                     </Alert>
-                                   )}
-                                   <div className="flex gap-2">
-                                     <Button 
-                                       onClick={() => handleUploadDesign(project.id)}
-                                       disabled={uploading === project.id}
-                                       className="flex-1"
-                                     >
-                                       {uploading === project.id ? (
-                                         <>
-                                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                                           Uploading...
-                                         </>
-                                       ) : (
-                                         <>
-                                           <Upload className="h-4 w-4 mr-2" />
-                                           Upload Design
-                                         </>
-                                       )}
-                                     </Button>
-                                   </div>
-                                 </div>
-                               </DialogContent>
-                             </Dialog>
+                             <div className="space-x-2">
+                               
+                               
+                            </div>
                           </div>
                         </div>
                       </div>
